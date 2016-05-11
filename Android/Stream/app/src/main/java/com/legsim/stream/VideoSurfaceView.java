@@ -2,11 +2,13 @@ package com.legsim.stream;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.Environment;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 
@@ -21,27 +23,30 @@ import javax.microedition.khronos.opengles.GL10;
 @SuppressLint("ViewConstructor")
 class VideoSurfaceView extends GLSurfaceView {
 
-    private final static boolean LOCAL = false;
-
-    private static final String FILE_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/sample.mkv";
-    //private static final String FILE_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/testvideo.3gp";
+    private static final String TAG = VideoSurfaceView.class.getSimpleName();
 
     private static int width;
     private static int height;
 
-    VideoRender mRenderer;
+    private VideoRender mRenderer;
     private VideoWorker videoWorker;
 
-    public VideoSurfaceView(Context context) {
-        super(context);
+    public VideoSurfaceView(Context context, AttributeSet attrs) {
+        super(context, attrs);
 
         setEGLContextClientVersion(2);
-        if (LOCAL){
-            videoWorker = new VideoWorkerLocal();
+
+        switch(MainActivity.getWorkerMode(context)){
+            case MainActivity.VIDEO_WORKER_MODE_LOCAL:
+                videoWorker = new VideoWorkerLocal(context);
+                break;
+            case MainActivity.VIDEO_WORKER_MODE_NETWORK:
+                videoWorker = new VideoWorkerNetwork();
+                break;
+            default:
+                Log.e(TAG, "invalid video worker mode");
         }
-        else{
-            videoWorker = new VideoWorkerNetwork();
-        }
+
         mRenderer = new VideoRender(context);
         setRenderer(mRenderer);
     }
@@ -111,6 +116,10 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private VideoWorker videoWorker;
 
+        private IntBuffer ib = IntBuffer.allocate(1);
+        int b[]=new int[1];
+        int bt[]=new int[1];
+
         public VideoRender(Context context) {
             mTriangleVertices = ByteBuffer.allocateDirect(
                 mTriangleVerticesData.length * FLOAT_SIZE_BYTES)
@@ -165,7 +174,32 @@ class VideoSurfaceView extends GLSurfaceView {
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
             checkGlError("glDrawArrays");
 
+/*
+            ib.position(0);
+            GLES20.glReadPixels(0, 0, width, height, GLES20.GL_RGB , GLES20.GL_UNSIGNED_BYTE , ib );
+            for(int i=0, k=0; i<height; i++, k++)
+            {//remember, that OpenGL bitmap is incompatible with Android bitmap
+                //and so, some correction need.
+                for(int j=0; j<width; j++)
+                {
+                    int pix=b[i*width+j];
+                    int pb=(pix>>16)&0xff;
+                    int pr=(pix<<16)&0x00ff0000;
+                    int pix1=(pix&0xff00ff00) | pr | pb;
+                    bt[(height-k-1)*width+j]=pix1;
+                }
+            }
+
+            Bitmap sb=Bitmap.createBitmap(bt, width, height, Bitmap.Config.ARGB_8888);
+*/
+            /*
+            gst_gl_shader_set_uniform_matrix_4fv(shader, "u_transformation", 1, FALSE, identity_matrix);
+            GLES20.
+                    */
+
             GLES20.glFinish();
+            
+
 
             //GLES20.glReadPixels();
             // int pixels[] = SavePixels(0, 0, width, height);
@@ -179,7 +213,11 @@ class VideoSurfaceView extends GLSurfaceView {
         public void onSurfaceChanged(GL10 glUnused, int newWidth, int newHeight) {
             width = newWidth;
             height = newHeight;
+            ib = IntBuffer.allocate(width * height);
+            b = new int[width * height];
+            bt = new int[width * height];
         	Log.d(TAG, "onsurfacechanged: " + width + ", " + height);
+
         }
         
         @Override
@@ -232,17 +270,12 @@ class VideoSurfaceView extends GLSurfaceView {
             mSurface.setOnFrameAvailableListener(this);
 
             Surface surface = new Surface(mSurface);
-            if (LOCAL) {
-                videoWorker.configure(surface, FILE_PATH);
-            }
-            else{
-                videoWorker.configure(surface, null);
-            }
+
+            videoWorker.configure(surface);
 
             synchronized(this) {
                 updateSurface = false;
             }
-            
 
             videoWorker.start();
         }

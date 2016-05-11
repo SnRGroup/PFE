@@ -1,10 +1,13 @@
 package com.legsim.stream;
 
+import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.media.MediaCodec;
 import android.media.MediaCodec.BufferInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.Surface;
 
 import java.io.IOException;
@@ -14,14 +17,29 @@ import java.nio.ByteBuffer;
  * Created by raffi on 10/04/2016.
  */
 public class VideoWorkerLocal extends Thread implements VideoWorker{
+
+    private static final String TAG = VideoWorkerLocal.class.getSimpleName();
+
     private MediaExtractor extractor;
     private MediaCodec decoder;
-    private Surface surface;
+    private Context context;
+    private boolean stop;
 
-    public void configure(Surface surface, String filePath) {
+    public VideoWorkerLocal(Context context){
+        super();
+        this.context = context;
+    }
+
+    public void finish() {
+        this.stop = true;
+    }
+
+    public void configure(Surface surface) {
         extractor = new MediaExtractor();
         try {
-            extractor.setDataSource(filePath);
+            AssetFileDescriptor afd = this.context.getResources().openRawResourceFd(R.raw.testvideo);
+            extractor.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            afd.close();
 
             for (int i = 0; i < extractor.getTrackCount(); i++) {
                 MediaFormat format = extractor.getTrackFormat(i);
@@ -35,7 +53,7 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
             }
 
             if (decoder == null) {
-                Log.e("DecodeActivity", "Can't find video info!");
+                Log.e(TAG, "Can't find video info!");
                 return;
             }
 
@@ -47,21 +65,21 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
 
 
     public void run() {
-
         ByteBuffer[] inputBuffers = decoder.getInputBuffers();
         ByteBuffer[] outputBuffers = decoder.getOutputBuffers();
         BufferInfo info = new BufferInfo();
         boolean isEOS = false;
         long startMs = System.currentTimeMillis();
+        this.stop = false;
 
-        while (!Thread.interrupted()) {
+        while (! this.stop) {
             if (!isEOS) {
                 int inIndex = decoder.dequeueInputBuffer(10000);
                 if (inIndex >= 0) {
                     ByteBuffer buffer = inputBuffers[inIndex];
                     int sampleSize = extractor.readSampleData(buffer, 0);
                     if (sampleSize < 0) {
-                        Log.d("DecodeActivity", "InputBuffer BUFFER_FLAG_END_OF_STREAM");
+                        Log.d(TAG, "InputBuffer BUFFER_FLAG_END_OF_STREAM");
                         decoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         isEOS = true;
                     } else {
@@ -74,18 +92,18 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
             int outIndex = decoder.dequeueOutputBuffer(info, 10000);
             switch (outIndex) {
                 case MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED:
-                    Log.d("DecodeActivity", "INFO_OUTPUT_BUFFERS_CHANGED");
+                    Log.d(TAG, "INFO_OUTPUT_BUFFERS_CHANGED");
                     outputBuffers = decoder.getOutputBuffers();
                     break;
                 case MediaCodec.INFO_OUTPUT_FORMAT_CHANGED:
-                    Log.d("DecodeActivity", "New format " + decoder.getOutputFormat());
+                    Log.d(TAG, "New format " + decoder.getOutputFormat());
                     break;
                 case MediaCodec.INFO_TRY_AGAIN_LATER:
-                    Log.d("DecodeActivity", "dequeueOutputBuffer timed out!");
+                    Log.d(TAG, "dequeueOutputBuffer timed out!");
                     break;
                 default:
                     ByteBuffer buffer = outputBuffers[outIndex];
-                    Log.v("DecodeActivity", "We can't use this buffer but render it due to the API limit, " + buffer);
+                    Log.v(TAG, "We can't use this buffer but render it due to the API limit, " + buffer);
 
                     // We use a very simple clock to keep the video FPS, or the video
                     // playback will be too fast
@@ -102,7 +120,7 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
             }
 
             if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Log.d("DecodeActivity", "OutputBuffer BUFFER_FLAG_END_OF_STREAM");
+                Log.d(TAG, "OutputBuffer BUFFER_FLAG_END_OF_STREAM");
                 break;
             }
         }

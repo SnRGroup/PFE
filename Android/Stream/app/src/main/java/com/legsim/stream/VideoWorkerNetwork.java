@@ -17,16 +17,12 @@ import java.util.LinkedList;
 public class VideoWorkerNetwork implements VideoWorker {
 
     private Thread thread;
-
     private MediaCodec decoder;
-
     private LinkedList<PESPacket> PESlist;
-
     private DatagramSocket clientsocketUDP;
-
     double lastPTS = 0;
-
     int lastCounter = 0;
+    boolean stop;
 
     public VideoWorkerNetwork() {
         try {
@@ -35,10 +31,9 @@ public class VideoWorkerNetwork implements VideoWorker {
 
         }
         thread = new Thread(new ReceiverRunnable());
-
     }
 
-    public void configure(Surface surface, String filePath) {
+    public void configure(Surface surface) {
         MediaFormat format = new MediaFormat();
         format.setString(MediaFormat.KEY_MIME, "video/avc");
         //format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 100000);
@@ -55,10 +50,16 @@ public class VideoWorkerNetwork implements VideoWorker {
         thread.start();
     }
 
+    public void finish() {
+        this.stop = true;
+    }
+
     public class ReceiverRunnable implements Runnable {
 
         @Override
         public void run() {
+            stop = false;
+
             decoder.setCallback(new MediaCodec.Callback() {
                 @Override
                 public void onInputBufferAvailable(MediaCodec codec, int index) {
@@ -118,7 +119,7 @@ public class VideoWorkerNetwork implements VideoWorker {
                 byte[] receivedata = new byte[65535];
 
 
-                while (true) {
+                while (! stop) {
                     DatagramPacket recv_packet = new DatagramPacket(receivedata, receivedata.length);
 
                     //Log.d("UDP","R");
@@ -202,6 +203,8 @@ public class VideoWorkerNetwork implements VideoWorker {
 
                 }
 
+                decoder.stop();
+                decoder.release();
 
             } catch (Exception e) {
 
