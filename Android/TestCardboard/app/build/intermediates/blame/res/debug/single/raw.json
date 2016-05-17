@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/res/merged/debug/raw/grid_fragment.shader",
+        "source": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/src/main/res/raw/grid_fragment.shader"
+    },
+    {
+        "merged": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/res/merged/debug/raw/light_vertex.shader",
+        "source": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/src/main/res/raw/light_vertex.shader"
+    },
+    {
+        "merged": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/res/merged/debug/raw/passthrough_fragment.shader",
+        "source": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/src/main/res/raw/passthrough_fragment.shader"
+    }
+]

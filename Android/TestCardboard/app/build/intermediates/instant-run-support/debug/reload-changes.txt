@@ -1,0 +1,2 @@
+CHANGED,/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/transforms/instantRun/debug/folders/4000/5/enhanced/com/legsim/testcardboard/MainActivity$override.class
+CHANGED,/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/transforms/instantRun/debug/folders/4000/5/enhanced/com/android/tools/fd/runtime/AppPatchesLoaderImpl.class

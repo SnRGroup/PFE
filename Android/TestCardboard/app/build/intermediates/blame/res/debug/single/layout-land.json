@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/res/merged/debug/layout-land/ui_layer_with_portrait_support.xml",
+        "source": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/exploded-aar/common/res/layout-land/ui_layer_with_portrait_support.xml"
+    },
+    {
+        "merged": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/res/merged/debug/layout-land/back_button.xml",
+        "source": "/home/legsim/Projects/SnR/PFE/Android/TestCardboard/app/build/intermediates/exploded-aar/common/res/layout-land/back_button.xml"
+    }
+]
