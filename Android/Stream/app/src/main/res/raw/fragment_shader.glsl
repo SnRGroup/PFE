@@ -63,6 +63,6 @@ void main() {
         vtc = vec2(er[0] + (l[0] / zr[0]), er[1] + (l[1] / zr[1]));
     }
 
-    // vtc = vec2(vTextureCoord[0], vTextureCoord[1]);
+    vtc = vec2(vTextureCoord[0], vTextureCoord[1]);
     gl_FragColor = texture2D(sTexture, vtc);
 }
