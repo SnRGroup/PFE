@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
             default:
                 actualMode = "invalid";
         }
-        textInfo.setText("actual mode: " + actualMode);
+        textInfo.setText("current mode: " + actualMode);
 
         mVideoView.onResume();
     }

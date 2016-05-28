@@ -2,9 +2,7 @@ package com.legsim.stream;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -20,7 +18,6 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -73,7 +70,7 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private FloatBuffer vertexBuffer, textureVerticesBuffer;
         private ShortBuffer drawListBuffer;
-
+/*
         private short drawOrder[] = { 0,1,2, 0,2,4, 5,3,6, 5,6,7 }; // order to draw vertices
 
         // number of coordinates per vertex in this array
@@ -81,7 +78,7 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
 
-        private float squareCoords[] = {
+        static float squareCoords[] = {
                 -1.0f,  1.0f,
                 -1.0f, -1.0f,
                 0.0f, -1.0f,
@@ -92,7 +89,7 @@ class VideoSurfaceView extends GLSurfaceView {
                 1.0f, 1.0f,
         };
 
-        private float textureVertices[] = {
+        static float textureVertices[] = {
                 0.5f, 1.0f,
                 0.5f, 0.0f,
                 1.0f, 0.0f,
@@ -102,8 +99,8 @@ class VideoSurfaceView extends GLSurfaceView {
                 0.5f, 0.0f,
                 0.5f, 1.0f,
         };
+*/
 
-/*
     private short drawOrder[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 
     // number of coordinates per vertex in this array
@@ -124,7 +121,7 @@ class VideoSurfaceView extends GLSurfaceView {
             1.0f, 0.0f,
             1.0f, 1.0f,
     };
-*/
+
 
         private final static int VERTEX_SHADER_RESOURCE_ID = R.raw.vertex_shader;
 
@@ -147,10 +144,6 @@ class VideoSurfaceView extends GLSurfaceView {
         private static int GL_TEXTURE_EXTERNAL_OES = 0x8D65;
 
         private VideoWorker videoWorker;
-
-        private IntBuffer ib = IntBuffer.allocate(1);
-        int b[]=new int[1];
-        int bt[]=new int[1];
 
         private Context context;
 
@@ -203,7 +196,14 @@ class VideoSurfaceView extends GLSurfaceView {
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
-
+/*
+            // test
+            textureVertices[0] = (textureVertices[0] + 0.01f) % 1.0f;
+            Log.d(TAG, "textureVertices[0]: " + textureVertices[0]);
+            textureVerticesBuffer.position(0);
+            textureVerticesBuffer.put(textureVertices);
+            textureVerticesBuffer.position(0);
+*/
             // Prepare the <insert shape here> coordinate data
             GLES20.glEnableVertexAttribArray(maPositionHandle);
             GLES20.glVertexAttribPointer(maPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer);
@@ -212,12 +212,14 @@ class VideoSurfaceView extends GLSurfaceView {
             GLES20.glVertexAttribPointer(maTextureHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
 
             float[] transMatrix = new float[16];
+            float[] scaleMatrix = new float[16];
             Matrix.setIdentityM(mMVPMatrix, 0);
             Matrix.setIdentityM(transMatrix, 0);
-            Matrix.translateM(transMatrix, 0, 0.0f, 0.0f, 0.0f);
-            //Matrix.scaleM(transMatrix, 0, 2.0f, 2.0f, 0.0f);
-            Matrix.multiplyMM(transMatrix, 0, mMVPMatrix, 0, transMatrix, 0);
-            GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, transMatrix, 0);
+            Matrix.setIdentityM(scaleMatrix, 0);
+            // Matrix.translateM(transMatrix, 0, -0.5f, -0.5f, 0.0f);
+            // Matrix.scaleM(scaleMatrix, 0, 2.0f, 2.0f, 0.0f);
+            Matrix.multiplyMM(mMVPMatrix, 0, transMatrix, 0, scaleMatrix, 0);
+            GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
             GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
 
             /*GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
@@ -237,9 +239,6 @@ class VideoSurfaceView extends GLSurfaceView {
         public void onSurfaceChanged(GL10 glUnused, int newWidth, int newHeight) {
             width = newWidth;
             height = newHeight;
-            ib = IntBuffer.allocate(width * height);
-            b = new int[width * height];
-            bt = new int[width * height];
         	Log.d(TAG, "onsurfacechanged: " + width + ", " + height);
 
         }
