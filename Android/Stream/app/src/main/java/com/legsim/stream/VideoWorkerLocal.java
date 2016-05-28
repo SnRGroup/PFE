@@ -37,7 +37,7 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
     public void configure(Surface surface) {
         extractor = new MediaExtractor();
         try {
-            AssetFileDescriptor afd = this.context.getResources().openRawResourceFd(R.raw.testvideo);
+            AssetFileDescriptor afd = this.context.getResources().openRawResourceFd(R.raw.test2);
             extractor.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
             afd.close();
 

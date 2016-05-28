@@ -3,6 +3,7 @@ package com.legsim.stream;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
@@ -12,6 +13,10 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -79,6 +84,8 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private FloatBuffer mTriangleVertices;
 
+        private final static int VERTEX_SHADER_RESOURCE_ID = R.raw.vertex_shader;
+
         private final String mVertexShader =
                 "uniform mat4 uMVPMatrix;\n" +
                 "uniform mat4 uSTMatrix;\n" +
@@ -87,8 +94,20 @@ class VideoSurfaceView extends GLSurfaceView {
                 "varying vec2 vTextureCoord;\n" +
                 "void main() {\n" +
                 "  gl_Position = uMVPMatrix * aPosition;\n" +
-                "  vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n" +
+                        "  gl_Position = vec4(gl_Position[0], gl_Position[1] + 10.0, gl_Position[2], gl_Position[3]);\n"+
+
+                /*"if (gl_Position[1] > 0.0)\n" +
+                "{\n"+
+                "  gl_Position = vec4(gl_Position[0], gl_Position[1] - 1.0, gl_Position[2], gl_Position[3]);\n"+
+                "}\n"+
+                "else\n"+
+                "{\n"+
+                "  gl_Position = vec4(gl_Position[0], gl_Position[1] + 1.0, gl_Position[2], gl_Position[3]);\n"+
+                "}\n"+*/
+                 "  vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n" +
                 "}\n";
+
+        private final static int FRAGMENT_SHADER_RESOURCE_ID = R.raw.fragment_shader;
 
         private final String mFragmentShader =
                 "#extension GL_OES_EGL_image_external : require\n" +
@@ -96,6 +115,17 @@ class VideoSurfaceView extends GLSurfaceView {
                 "varying vec2 vTextureCoord;\n" +
                 "uniform samplerExternalOES sTexture;\n" +
                 "void main() {\n" +
+                        /*"if (vTextureCoord[1] > 0.5)" +
+                        "{" +
+                        "   vec2 tc = vec2(vTextureCoord[0], vTextureCoord[1] - 0.5);" +
+                        "   gl_FragColor = texture2D( sTexture, tc );" +
+                        "}" +
+                        "else" +
+                        "{" +
+                        "   vec2 tc = vec2(vTextureCoord[0], vTextureCoord[1] - 0.5);" +
+                        "   gl_FragColor = texture2D( sTexture, tc );" +
+                        "}" +
+*/
                 "  gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
                 "}\n";
 
@@ -120,7 +150,11 @@ class VideoSurfaceView extends GLSurfaceView {
         int b[]=new int[1];
         int bt[]=new int[1];
 
+        private Context context;
+
         public VideoRender(Context context) {
+            this.context = context;
+
             mTriangleVertices = ByteBuffer.allocateDirect(
                 mTriangleVerticesData.length * FLOAT_SIZE_BYTES)
                     .order(ByteOrder.nativeOrder()).asFloatBuffer();
@@ -132,7 +166,7 @@ class VideoSurfaceView extends GLSurfaceView {
         public void setVideoDecoder(VideoWorker vdt) {
             videoWorker = vdt;
         }
-        
+
         @Override
         public void onDrawFrame(GL10 glUnused) {
             //Log.d(TAG, "on draw");
@@ -167,12 +201,20 @@ class VideoSurfaceView extends GLSurfaceView {
             GLES20.glEnableVertexAttribArray(maTextureHandle);
             checkGlError("glEnableVertexAttribArray maTextureHandle");
 
-            Matrix.setIdentityM(mMVPMatrix, 0);
+           /* Matrix.setIdentityM(mMVPMatrix, 0);
             GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-            GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
+            GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);*/
+            float[] transMatrix = new float[16];
+            Matrix.setIdentityM(mMVPMatrix, 0);
+            Matrix.setIdentityM(transMatrix, 0);
+            Matrix.translateM(transMatrix, 0, 0, 0.0f, 0.0f);
+            Matrix.multiplyMM(transMatrix, 0, mMVPMatrix, 0, transMatrix, 0);
+            GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, transMatrix, 0);
+            GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
 
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
             checkGlError("glDrawArrays");
+
 
 /*
             ib.position(0);
@@ -198,7 +240,7 @@ class VideoSurfaceView extends GLSurfaceView {
                     */
 
             GLES20.glFinish();
-            
+
 
 
             //GLES20.glReadPixels();
@@ -219,10 +261,10 @@ class VideoSurfaceView extends GLSurfaceView {
         	Log.d(TAG, "onsurfacechanged: " + width + ", " + height);
 
         }
-        
+
         @Override
         public void onSurfaceCreated(GL10 glUnused, EGLConfig config) {
-            mProgram = createProgram(mVertexShader, mFragmentShader);
+            mProgram = createProgram(VERTEX_SHADER_RESOURCE_ID, FRAGMENT_SHADER_RESOURCE_ID);
             if (mProgram == 0) {
                 return;
             }
@@ -284,7 +326,29 @@ class VideoSurfaceView extends GLSurfaceView {
             updateSurface = true;
         }
 
-        private int loadShader(int shaderType, String source) {
+        private String readTextFileFromResource(int resourceId) {
+            StringBuilder body = new StringBuilder();
+            try {
+                InputStream inputStream =
+                        context.getResources().openRawResource(resourceId);
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String nextLine;
+                while ((nextLine = bufferedReader.readLine()) != null) {
+                    body.append(nextLine);
+                    body.append('\n');
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Could not open resource: " + resourceId, e);
+            } catch (Resources.NotFoundException nfe) {
+                Log.e(TAG, "Resource not found: " + resourceId, nfe);
+            }
+            return body.toString();
+        }
+
+        private int loadShader(int shaderType, int resourceId) {
+            String source = readTextFileFromResource(resourceId);
+
             int shader = GLES20.glCreateShader(shaderType);
             if (shader != 0) {
                 GLES20.glShaderSource(shader, source);
@@ -301,12 +365,12 @@ class VideoSurfaceView extends GLSurfaceView {
             return shader;
         }
 
-        private int createProgram(String vertexSource, String fragmentSource) {
-            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource);
+        private int createProgram(int vertexResourceId, int fragmentResourceId) {
+            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexResourceId);
             if (vertexShader == 0) {
                 return 0;
             }
-            int pixelShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource);
+            int pixelShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentResourceId);
             if (pixelShader == 0) {
                 return 0;
             }
