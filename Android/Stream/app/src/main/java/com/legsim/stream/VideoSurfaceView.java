@@ -70,58 +70,28 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private FloatBuffer vertexBuffer, textureVerticesBuffer;
         private ShortBuffer drawListBuffer;
-/*
-        private short drawOrder[] = { 0,1,2, 0,2,4, 5,3,6, 5,6,7 }; // order to draw vertices
+
+        private short drawOrder_WITHOUT_PROCESSING[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 
         // number of coordinates per vertex in this array
-        private static final int COORDS_PER_VERTEX = 2;
+        private static final int COORDS_PER_VERTEX_WITHOUT_PROCESSING = 2;
 
-        private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
+        private final int vertexStride_WITHOUT_PROCESSING = COORDS_PER_VERTEX_WITHOUT_PROCESSING * 4; // 4 bytes per vertex
 
-        static float squareCoords[] = {
-                -1.0f,  1.0f,
-                -1.0f, -1.0f,
-                0.0f, -1.0f,
-                0.0f, -1.0f,
-                0.0f,  1.0f,
-                0.0f,  1.0f,
-                1.0f, -1.0f,
-                1.0f, 1.0f,
+        private float squareCoords_WITHOUT_PROCESSING[] = {
+           -1.0f,  1.0f,
+           -1.0f, -1.0f,
+            1.0f, -1.0f,
+            1.0f,  1.0f,
         };
 
-        static float textureVertices[] = {
-                0.5f, 1.0f,
-                0.5f, 0.0f,
-                1.0f, 0.0f,
-                0.0f, 0.0f,
-                1.0f, 1.0f,
+        private float textureVertices_WITHOUT_PROCESSING[] = {
                 0.0f, 1.0f,
-                0.5f, 0.0f,
-                0.5f, 1.0f,
+                0.0f, 0.0f,
+                1.0f, 0.0f,
+                1.0f, 1.0f,
         };
-*/
-/*
-    private short drawOrder[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 
-    // number of coordinates per vertex in this array
-    private static final int COORDS_PER_VERTEX = 2;
-
-    private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
-
-    private float squareCoords[] = {
-       -1.0f,  1.0f,
-       -1.0f, -1.0f,
-        1.0f, -1.0f,
-        1.0f,  1.0f,
-    };
-
-    private float textureVertices[] = {
-            0.0f, 1.0f,
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f,
-    };
-*/
 
         // position de la ROI
         private float X = 200f;
@@ -132,7 +102,7 @@ class VideoSurfaceView extends GLSurfaceView {
         private float H = 720f;
 
         // order to draw vertices
-        private short drawOrder[] = {
+        private short drawOrder_WITH_PROCESSING[] = {
             // zone 1
             0,  1,   2,
             0,  2,   3,
@@ -151,11 +121,11 @@ class VideoSurfaceView extends GLSurfaceView {
         };
 
         // number of coordinates per vertex in this array
-        private static final int COORDS_PER_VERTEX = 2;
+        private static final int COORDS_PER_VERTEX_WITH_PROCESSING = 2;
 
-        private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
+        private final int vertexStride = COORDS_PER_VERTEX_WITH_PROCESSING * 4; // 4 bytes per vertex
 
-        private float squareCoords[] = {
+        private float squareCoords_WITH_PROCESSING[] = {
             // zone 1
             -1f,            1f,
             -1f,            -1f,
@@ -183,7 +153,7 @@ class VideoSurfaceView extends GLSurfaceView {
             X / L,          -2f * Y / H
         };
 
-        private float textureVertices[] = {
+        private float textureVertices_WITH_PROCESSING[] = {
             // zone 1
             0f,             1f,
             0f,             1f / 2f,
@@ -234,29 +204,45 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private VideoWorker videoWorker;
 
+        private int processingMode;
+
         private Context context;
 
         public VideoRender(Context context) {
             this.context = context;
 
+            processingMode = MainActivity.getProcessingMode(context);
+
             // initialize vertex byte buffer for shape coordinates
-            ByteBuffer bb = ByteBuffer.allocateDirect(squareCoords.length * 4);
+            ByteBuffer bb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    squareCoords_WITH_PROCESSING.length * 4 :
+                    squareCoords_WITHOUT_PROCESSING.length * 4);
             bb.order(ByteOrder.nativeOrder());
             vertexBuffer = bb.asFloatBuffer();
-            vertexBuffer.put(squareCoords);
+            vertexBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    squareCoords_WITH_PROCESSING :
+                    squareCoords_WITHOUT_PROCESSING);
             vertexBuffer.position(0);
 
             // initialize byte buffer for the draw list
-            ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
+            ByteBuffer dlb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING.length * 2 :
+                    drawOrder_WITHOUT_PROCESSING.length * 2);
             dlb.order(ByteOrder.nativeOrder());
             drawListBuffer = dlb.asShortBuffer();
-            drawListBuffer.put(drawOrder);
+            drawListBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING :
+                    drawOrder_WITHOUT_PROCESSING);
             drawListBuffer.position(0);
 
-            ByteBuffer bb2 = ByteBuffer.allocateDirect(textureVertices.length * 4);
+            ByteBuffer bb2 = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    textureVertices_WITH_PROCESSING.length * 4 :
+                    textureVertices_WITHOUT_PROCESSING.length * 4);
             bb2.order(ByteOrder.nativeOrder());
             textureVerticesBuffer = bb2.asFloatBuffer();
-            textureVerticesBuffer.put(textureVertices);
+            textureVerticesBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    textureVertices_WITH_PROCESSING :
+                    textureVertices_WITHOUT_PROCESSING);
             textureVerticesBuffer.position(0);
 
             Matrix.setIdentityM(mSTMatrix, 0);
@@ -294,11 +280,15 @@ class VideoSurfaceView extends GLSurfaceView {
             textureVerticesBuffer.position(0);
 */
             // Prepare the <insert shape here> coordinate data
+            int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    COORDS_PER_VERTEX_WITH_PROCESSING :
+                    COORDS_PER_VERTEX_WITHOUT_PROCESSING;
+
             GLES20.glEnableVertexAttribArray(maPositionHandle);
-            GLES20.glVertexAttribPointer(maPositionHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer);
+            GLES20.glVertexAttribPointer(maPositionHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer);
 
             GLES20.glEnableVertexAttribArray(maTextureHandle);
-            GLES20.glVertexAttribPointer(maTextureHandle, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
+            GLES20.glVertexAttribPointer(maTextureHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
 
             float[] transMatrix = new float[16];
             float[] scaleMatrix = new float[16];
@@ -314,7 +304,10 @@ class VideoSurfaceView extends GLSurfaceView {
             /*GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
             checkGlError("glDrawArrays");
             */
-            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+            int drawOrderLength = processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING.length :
+                    drawOrder_WITHOUT_PROCESSING.length;
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderLength, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
             checkGlError("glDrawElements");
 
             // Disable vertex array

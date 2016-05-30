@@ -11,44 +11,18 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <LinearLayout
+    <ToggleButton
+        android:id="@+id/btnNetwork"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/buttons">
+        android:textOff="Local"
+        android:textOn="Network"/>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Click to play Local"
-            android:onClick="btnPlayLocal"
-            android:textColor="#FFF"
-            android:background="#000"
-            android:alpha="0.5"
-            android:layout_margin="5dp"
-            android:padding="5dp"/>
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Click to play network"
-            android:onClick="btnPlayNetwork"
-            android:textColor="#FFF"
-            android:background="#000"
-            android:alpha="0.5"
-            android:layout_margin="5dp"
-            android:padding="5dp"/>
-    </LinearLayout>
-
-    <TextView
+    <ToggleButton
+        android:id="@+id/btnProcessing"
+        android:layout_below="@+id/btnNetwork"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/buttons"
-        android:id="@+id/textInfo"
-        android:text="info:"
-        android:textColor="#FFF"
-        android:background="#000"
-        android:alpha="0.5"
-        android:layout_margin="5dp"
-        android:padding="5dp"/>
-
+        android:textOff="Without processing"
+        android:textOn="With processing"/>
 </RelativeLayout>
