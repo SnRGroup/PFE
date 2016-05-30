@@ -115,6 +115,9 @@ public class MainActivity extends AppCompatActivity {
         btnNetwork.setChecked(getWorkerMode(getApplicationContext()) == VIDEO_WORKER_MODE_NETWORK ?
                 true :
                 false);
+        btnProcessing.setChecked(getProcessingMode(getApplicationContext()) == PROCESSING_MODE_WITH ?
+                true :
+                false);
 
         mVideoView.onResume();
     }
