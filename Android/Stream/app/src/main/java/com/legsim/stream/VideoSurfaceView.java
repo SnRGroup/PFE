@@ -100,7 +100,7 @@ class VideoSurfaceView extends GLSurfaceView {
                 0.5f, 1.0f,
         };
 */
-
+/*
     private short drawOrder[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 
     // number of coordinates per vertex in this array
@@ -121,6 +121,95 @@ class VideoSurfaceView extends GLSurfaceView {
             1.0f, 0.0f,
             1.0f, 1.0f,
     };
+*/
+
+        // position de la ROI
+        private float X = 200f;
+        private float Y = 200f;
+
+        // dimension video recue
+        private float L = 640f;
+        private float H = 720f;
+
+        // order to draw vertices
+        private short drawOrder[] = {
+            // zone 1
+            0,  1,   2,
+            0,  2,   3,
+            // zone 2
+            4,  5,   6,
+            4,  6,   7,
+            // zone 3
+            8,  9,   10,
+            8,  10,  11,
+            // ROI
+            12, 13,  14,
+            12, 14,  15,
+            // zone 4,
+            16, 17,  18,
+            16, 18,  19
+        };
+
+        // number of coordinates per vertex in this array
+        private static final int COORDS_PER_VERTEX = 2;
+
+        private final int vertexStride = COORDS_PER_VERTEX * 4; // 4 bytes per vertex
+
+        private float squareCoords[] = {
+            // zone 1
+            -1f,            1f,
+            -1f,            -1f,
+            -1f + (X / L),  -1f,
+            -1f + (X / L),  1f,
+            // zone 2
+            X / L,          1f,
+            X / L,          -1f,
+            1f,             -1f,
+            1f,             1f,
+            // zone 3
+            -1f + (X / L),  1f,
+            -1f + (X / L),  1f - (2f * Y / H),
+            X / L,          1f - (2f * Y / H),
+            X / L,          1f,
+            // ROI
+            -1f + (X / L),  1f - (2f* Y / H),
+            -1f + (X / L),  - 2f * Y / H,
+            X / L,          - 2f * Y / H,
+            X / L,          1 - (2f * Y / H),
+            // zone 4
+            -1f + (X / L),  -2f * Y / H,
+            -1f + (X / L),  -1f,
+            X / L,          -1f,
+            X / L,          -2f * Y / H
+        };
+
+        private float textureVertices[] = {
+            // zone 1
+            0f,             1f,
+            0f,             1f / 2f,
+            X / (2f * L),   1f / 2f,
+            X / (2f * L),   1f,
+            // zone 2
+            X / (2f * L),   1f,
+            X / (2f * L),   1f / 2f,
+            1f / 2f,        1f / 2f,
+            1f / 2f,        1f,
+            // zone 3
+            1f / 2f,        1f,
+            1f / 2f,        1f - (Y / (2f * H)),
+            1f,             1f - (Y / (2f * H)),
+            1f,             1f,
+            // ROI
+            0f,             1f / 2f,
+            0f,             0f,
+            1f,             0f,
+            1f,             1f / 2f,
+            // zone 4
+            1f / 2f,        1- (Y /(2f * H)),
+            1f / 2f,        3f / 4f,
+            1f,             3f / 4f,
+            1f,             1- (Y /(2f * H))
+        };
 
 
         private final static int VERTEX_SHADER_RESOURCE_ID = R.raw.vertex_shader;
