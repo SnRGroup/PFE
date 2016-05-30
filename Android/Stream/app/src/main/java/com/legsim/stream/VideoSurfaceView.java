@@ -86,10 +86,10 @@ class VideoSurfaceView extends GLSurfaceView {
         };
 
         private float textureVertices_WITHOUT_PROCESSING[] = {
-                0.0f, 1.0f,
-                0.0f, 0.0f,
-                1.0f, 0.0f,
-                1.0f, 1.0f,
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f,
+            1.0f, 1.0f,
         };
 
 
@@ -153,6 +153,9 @@ class VideoSurfaceView extends GLSurfaceView {
             X / L,          -2f * Y / H
         };
 
+        private final static float VERTICE_MARGE_X = 1f / 1920f;
+        private final static float VERTICE_MARGE_Y = 1f / 1080f;
+
         private float textureVertices_WITH_PROCESSING[] = {
             // zone 1
             0f,             1f,
@@ -212,6 +215,31 @@ class VideoSurfaceView extends GLSurfaceView {
             this.context = context;
 
             processingMode = MainActivity.getProcessingMode(context);
+
+
+            // ajout de marge sur les vertices
+            for(int i = 0; i < textureVertices_WITH_PROCESSING.length; i++){
+                float facteur;
+                if (i <= 15) {  // zone 1 ou 2
+                    facteur = 1;
+                }
+                else {
+                    facteur = 1;
+                }
+
+                if ((i % 8 == 0) || (i % 8 == 2)) {
+                    textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_X);
+                }
+                else if ((i % 8 == 4) || (i % 8 == 6)) {
+                    textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_X);
+                }
+                else if ((i % 8 == 3) || (i % 8 == 5)) {
+                    textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_Y);
+                }
+                else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
+                    textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_Y);
+                }
+            }
 
             // initialize vertex byte buffer for shape coordinates
             ByteBuffer bb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
