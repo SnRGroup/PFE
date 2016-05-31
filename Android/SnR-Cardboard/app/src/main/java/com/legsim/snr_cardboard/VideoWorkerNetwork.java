@@ -5,6 +5,8 @@ import android.media.MediaFormat;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -90,7 +92,6 @@ public class VideoWorkerNetwork implements VideoWorker {
                     MediaFormat bufferFormat = codec.getOutputFormat(index);
 
                     //Log.d("Display", info.presentationTimeUs / 1000000.0 + "");
-
 
                     codec.releaseOutputBuffer(index, info.presentationTimeUs);
 

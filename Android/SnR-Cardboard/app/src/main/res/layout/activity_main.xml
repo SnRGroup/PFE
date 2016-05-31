@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.legsim.snr_cardboard.MainActivity">
+    tools:context="com.legsim.snr_cardboard.MainActivity"
+    android:keepScreenOn="true">
 
     <com.google.vrtoolkit.cardboard.CardboardView
         android:id="@+id/cardboardview"

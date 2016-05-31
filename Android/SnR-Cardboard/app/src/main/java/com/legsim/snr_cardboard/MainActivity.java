@@ -67,8 +67,8 @@ public class MainActivity
 
 
     public void onNewFrame(HeadTransform headTransform) {
-        MainActivity mainActivity = this;
-        synchronized (mainActivity) {
+
+        synchronized (this) {
             if (this.updateSurface) {
                 this.mSurface.updateTexImage();
                 this.mSurface.getTransformMatrix(this.mSTMatrix);
@@ -76,39 +76,11 @@ public class MainActivity
             }
         }
         this.head = headTransform;
-        /*
-        GLES20.glClearColor((float)1.0f, (float)1.0f, (float)0.0f, (float)1.0f);
-        GLES20.glClear((int)16640);
-        GLES20.glUseProgram((int)this.mProgram);
-        this.checkGlError("glUseProgram");
-        GLES20.glActiveTexture((int)33984);
-        GLES20.glBindTexture((int)GL_TEXTURE_EXTERNAL_OES, (int)this.mTextureID);
-        this.mTriangleVertices.position(0);
-        GLES20.glVertexAttribPointer((int)this.maPositionHandle, (int)3, (int)5126, (boolean)false, (int)20, (Buffer)this.mTriangleVertices);
-        this.checkGlError("glVertexAttribPointer maPosition");
-        GLES20.glEnableVertexAttribArray((int)this.maPositionHandle);
-        this.checkGlError("glEnableVertexAttribArray maPositionHandle");
-        this.mTriangleVertices.position(3);
-        GLES20.glVertexAttribPointer((int)this.maTextureHandle, (int)3, (int)5126, (boolean)false, (int)20, (Buffer)this.mTriangleVertices);
-        this.checkGlError("glVertexAttribPointer maTextureHandle");
-        GLES20.glEnableVertexAttribArray((int)this.maTextureHandle);
-        this.checkGlError("glEnableVertexAttribArray maTextureHandle");
-        float[] transMatrix = new float[16];
-        Matrix.setIdentityM((float[])transMatrix, (int)0);
-        Matrix.translateM((float[])transMatrix, (int)0, (float)150.0f, (float)150.0f, (float)0.0f);
-        Matrix.multiplyMM((float[])transMatrix, (int)0, (float[])this.mMVPMatrix, (int)0, (float[])transMatrix, (int)0);
-        GLES20.glUniformMatrix4fv((int)this.muMVPMatrixHandle, (int)1, (boolean)false, (float[])transMatrix, (int)0);
-        GLES20.glUniformMatrix4fv((int)this.muSTMatrixHandle, (int)1, (boolean)false, (float[])this.mSTMatrix, (int)0);
-        GLES20.glDrawArrays((int)5, (int)0, (int)4);
-        this.checkGlError("glDrawArrays");
-        GLES20.glFinish();
-        Matrix.setLookAtM((float[])this.camera, (int)0, (float)0.0f, (float)0.0f, (float)0.01f, (float)0.0f, (float)0.0f, (float)0.0f, (float)0.0f, (float)1.0f, (float)0.0f);
-        MainActivity.checkGLError("onReadyToDraw");
-        */
+
     }
 
     public void onDrawEye(Eye eye) {
-        GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+        GLES20.glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
 
         GLES20.glUseProgram(mProgram);
@@ -116,6 +88,14 @@ public class MainActivity
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
+
+        /*
+        ByteBuffer buffer = ByteBuffer.allocate(1280*720);
+        GLES20.glReadPixels(0,0,1280,720,GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer);
+
+
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0 , 3, 1280, 720, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer);
+        */
 
         mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
         GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
