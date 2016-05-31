@@ -2,15 +2,19 @@ package com.legsim.snr_cardboard;
 
 import android.media.MediaCodec;
 import android.media.MediaFormat;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InterfaceAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 /**
@@ -18,21 +22,39 @@ import java.util.LinkedList;
  */
 public class VideoWorkerNetwork implements VideoWorker {
 
-    private Thread thread;
+    private Thread threadVideo;
     private MediaCodec decoder;
     private LinkedList<PESPacket> PESlist;
     private DatagramSocket clientsocketUDP;
+
+    private Thread threadControl;
+    private Socket clientsocketTCP;
+    DataOutputStream outToServer;
+    BufferedReader inFromServer;
+
+    public HashMap<Integer, int[]> zoiPos;
+
+    private int zoiX;
+    private int zoiY;
+
+    private MainActivity mAct;
+
     double lastPTS = 0;
     int lastCounter = 0;
     boolean stop;
 
-    public VideoWorkerNetwork() {
+    public VideoWorkerNetwork(MainActivity mAct) {
+        this.mAct = mAct;
         try {
             decoder = MediaCodec.createDecoderByType("video/avc");
         } catch (Exception e) {
 
         }
-        thread = new Thread(new ReceiverRunnable());
+
+        zoiPos = new HashMap<>();
+
+        threadVideo = new Thread(new VideoReceiverRunnable());
+        threadControl = new Thread(new ControlRunnable());
     }
 
     public void configure(Surface surface) {
@@ -49,14 +71,15 @@ public class VideoWorkerNetwork implements VideoWorker {
     }
 
     public void start() {
-        thread.start();
+        threadVideo.start();
+        threadControl.start();
     }
 
     public void finish() {
         this.stop = true;
     }
 
-    public class ReceiverRunnable implements Runnable {
+    public class VideoReceiverRunnable implements Runnable {
 
         @Override
         public void run() {
@@ -120,7 +143,7 @@ public class VideoWorkerNetwork implements VideoWorker {
                 clientsocketUDP = new DatagramSocket(1235);
                 byte[] receivedata = new byte[65535];
 
-                while (! stop ) {
+                while (!stop) {
                     DatagramPacket recv_packet = new DatagramPacket(receivedata, receivedata.length);
 
                     //Log.d("UDP","R");
@@ -208,6 +231,45 @@ public class VideoWorkerNetwork implements VideoWorker {
                 decoder.release();
 
             } catch (Exception e) {
+
+            }
+        }
+    }
+
+    public class ControlRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                clientsocketTCP = new Socket("192.168.1.171", 1234);
+                outToServer = new DataOutputStream((clientsocketTCP.getOutputStream()));
+                inFromServer = new BufferedReader(new InputStreamReader(clientsocketTCP.getInputStream()));
+
+
+                while (!stop) {
+
+                    outToServer.write("100,200\n".getBytes());
+                    outToServer.flush();
+
+                    String s = inFromServer.readLine();
+                    Log.d("TCP",s);
+                    String args[] = s.split(";");
+                    String cmd = args[0];
+                    if (cmd.equals("POS")) {
+                        int imgCount = Integer.parseInt(args[1]);
+                        int newX = Integer.parseInt(args[2]);
+                        int newY = Integer.parseInt(args[3]);
+                        Log.d("POS", imgCount + " - " + newX + " - " + newY);
+
+                        zoiPos.put(imgCount, new int[]{newX, newY});
+
+                    }
+                }
+
+
+                clientsocketTCP.close();
+
+            } catch (IOException e) {
 
             }
         }

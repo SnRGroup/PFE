@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.HashMap;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
@@ -57,6 +58,8 @@ public class MainActivity
     */
     private FloatBuffer vertexBuffer, textureVerticesBuffer;
     private ShortBuffer drawListBuffer;
+
+
 
     private short drawOrder_WITHOUT_PROCESSING[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
 
@@ -207,6 +210,7 @@ public class MainActivity
         */
         processingMode = MainActivity.getProcessingMode(getApplicationContext());
 
+
         // TODO to be static
         for (int i = 0; i < squareCoords_WITH_PROCESSING.length; i++){
             squareCoords_WITH_PROCESSING[i] *= 2;
@@ -274,7 +278,7 @@ public class MainActivity
         Matrix.setIdentityM(this.mSTMatrix, 0);
 
         if (getWorkerMode(getApplicationContext()) == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
-            this.videoWorker = new VideoWorkerNetwork();
+            this.videoWorker = new VideoWorkerNetwork(this);
         }
         else{
             this.videoWorker = new VideoWorkerLocal(getApplicationContext());
@@ -306,6 +310,7 @@ public class MainActivity
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
 
 
+        /*
         mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
         GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
                 TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
@@ -320,6 +325,7 @@ public class MainActivity
         GLES20.glEnableVertexAttribArray(maTextureHandle);
         this.checkGlError("glEnableVertexAttribArray maTextureHandle");
         */
+
         int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 COORDS_PER_VERTEX_WITH_PROCESSING :
                 COORDS_PER_VERTEX_WITHOUT_PROCESSING;
