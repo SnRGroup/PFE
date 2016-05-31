@@ -1,4 +1,4 @@
-package com.legsim.stream;
+package com.legsim.snr_cardboard;
 
 import java.nio.ByteBuffer;
 

@@ -2,8 +2,7 @@ package com.legsim.stream;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Bitmap;
+import android.content.res.Resources;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -12,10 +11,14 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -65,39 +68,127 @@ class VideoSurfaceView extends GLSurfaceView {
         implements Renderer, SurfaceTexture.OnFrameAvailableListener {
         private static String TAG = "VideoRender";
 
-        private static final int FLOAT_SIZE_BYTES = 4;
-        private static final int TRIANGLE_VERTICES_DATA_STRIDE_BYTES = 5 * FLOAT_SIZE_BYTES;
-        private static final int TRIANGLE_VERTICES_DATA_POS_OFFSET = 0;
-        private static final int TRIANGLE_VERTICES_DATA_UV_OFFSET = 3;
-        private final float[] mTriangleVerticesData = {
-            // X, Y, Z, U, V
-            -1.0f, -1.0f, 0, 0.f, 0.f,
-            1.0f, -1.0f, 0, 1.f, 0.f,
-            -1.0f,  1.0f, 0, 0.f, 1.f,
-            1.0f,  1.0f, 0, 1.f, 1.f,
+        private FloatBuffer vertexBuffer, textureVerticesBuffer;
+        private ShortBuffer drawListBuffer;
+
+        private short drawOrder_WITHOUT_PROCESSING[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
+
+        // number of coordinates per vertex in this array
+        private static final int COORDS_PER_VERTEX_WITHOUT_PROCESSING = 2;
+
+        private final int vertexStride_WITHOUT_PROCESSING = COORDS_PER_VERTEX_WITHOUT_PROCESSING * 4; // 4 bytes per vertex
+
+        private float squareCoords_WITHOUT_PROCESSING[] = {
+           -1.0f,  1.0f,
+           -1.0f, -1.0f,
+            1.0f, -1.0f,
+            1.0f,  1.0f,
         };
 
-        private FloatBuffer mTriangleVertices;
+        private float textureVertices_WITHOUT_PROCESSING[] = {
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            1.0f, 0.0f,
+            1.0f, 1.0f,
+        };
 
-        private final String mVertexShader =
-                "uniform mat4 uMVPMatrix;\n" +
-                "uniform mat4 uSTMatrix;\n" +
-                "attribute vec4 aPosition;\n" +
-                "attribute vec4 aTextureCoord;\n" +
-                "varying vec2 vTextureCoord;\n" +
-                "void main() {\n" +
-                "  gl_Position = uMVPMatrix * aPosition;\n" +
-                "  vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n" +
-                "}\n";
 
-        private final String mFragmentShader =
-                "#extension GL_OES_EGL_image_external : require\n" +
-                "precision mediump float;\n" +
-                "varying vec2 vTextureCoord;\n" +
-                "uniform samplerExternalOES sTexture;\n" +
-                "void main() {\n" +
-                "  gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
-                "}\n";
+        // position de la ROI
+        private float X = 200f;
+        private float Y = 200f;
+
+        // dimension video recue
+        private float L = 640f;
+        private float H = 720f;
+
+        // order to draw vertices
+        private short drawOrder_WITH_PROCESSING[] = {
+            // zone 1
+            0,  1,   2,
+            0,  2,   3,
+            // zone 2
+            4,  5,   6,
+            4,  6,   7,
+            // zone 3
+            8,  9,   10,
+            8,  10,  11,
+            // ROI
+            12, 13,  14,
+            12, 14,  15,
+            // zone 4,
+            16, 17,  18,
+            16, 18,  19
+        };
+
+        // number of coordinates per vertex in this array
+        private static final int COORDS_PER_VERTEX_WITH_PROCESSING = 2;
+
+        private final int vertexStride = COORDS_PER_VERTEX_WITH_PROCESSING * 4; // 4 bytes per vertex
+
+        private float squareCoords_WITH_PROCESSING[] = {
+            // zone 1
+            -1f,            1f,
+            -1f,            -1f,
+            -1f + (X / L),  -1f,
+            -1f + (X / L),  1f,
+            // zone 2
+            X / L,          1f,
+            X / L,          -1f,
+            1f,             -1f,
+            1f,             1f,
+            // zone 3
+            -1f + (X / L),  1f,
+            -1f + (X / L),  1f - (2f * Y / H),
+            X / L,          1f - (2f * Y / H),
+            X / L,          1f,
+            // ROI
+            -1f + (X / L),  1f - (2f* Y / H),
+            -1f + (X / L),  - 2f * Y / H,
+            X / L,          - 2f * Y / H,
+            X / L,          1 - (2f * Y / H),
+            // zone 4
+            -1f + (X / L),  -2f * Y / H,
+            -1f + (X / L),  -1f,
+            X / L,          -1f,
+            X / L,          -2f * Y / H
+        };
+
+        private final static float VERTICE_MARGE_X = 1f / 1920f;
+        private final static float VERTICE_MARGE_Y = 1f / 1080f;
+
+        private float textureVertices_WITH_PROCESSING[] = {
+            // zone 1
+            0f,             1f,
+            0f,             1f / 2f,
+            X / (2f * L),   1f / 2f,
+            X / (2f * L),   1f,
+            // zone 2
+            X / (2f * L),   1f,
+            X / (2f * L),   1f / 2f,
+            1f / 2f,        1f / 2f,
+            1f / 2f,        1f,
+            // zone 3
+            1f / 2f,        1f,
+            1f / 2f,        1f - (Y / (2f * H)),
+            1f,             1f - (Y / (2f * H)),
+            1f,             1f,
+            // ROI
+            0f,             1f / 2f,
+            0f,             0f,
+            1f,             0f,
+            1f,             1f / 2f,
+            // zone 4
+            1f / 2f,        1- (Y /(2f * H)),
+            1f / 2f,        3f / 4f,
+            1f,             3f / 4f,
+            1f,             1- (Y /(2f * H))
+        };
+
+
+        private final static int VERTEX_SHADER_RESOURCE_ID = R.raw.vertex_shader;
+
+        private final static int FRAGMENT_SHADER_RESOURCE_ID = R.raw.fragment_shader;
+
 
         private float[] mMVPMatrix = new float[16];
         private float[] mSTMatrix = new float[16];
@@ -116,15 +207,71 @@ class VideoSurfaceView extends GLSurfaceView {
 
         private VideoWorker videoWorker;
 
-        private IntBuffer ib = IntBuffer.allocate(1);
-        int b[]=new int[1];
-        int bt[]=new int[1];
+        private int processingMode;
+
+        private Context context;
 
         public VideoRender(Context context) {
-            mTriangleVertices = ByteBuffer.allocateDirect(
-                mTriangleVerticesData.length * FLOAT_SIZE_BYTES)
-                    .order(ByteOrder.nativeOrder()).asFloatBuffer();
-            mTriangleVertices.put(mTriangleVerticesData).position(0);
+            this.context = context;
+
+            processingMode = MainActivity.getProcessingMode(context);
+
+
+            // ajout de marge sur les vertices
+            for(int i = 0; i < textureVertices_WITH_PROCESSING.length; i++){
+                float facteur;
+                if (i <= 15) {  // zone 1 ou 2
+                    facteur = 1;
+                }
+                else {
+                    facteur = 1;
+                }
+
+                if ((i % 8 == 0) || (i % 8 == 2)) {
+                    textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_X);
+                }
+                else if ((i % 8 == 4) || (i % 8 == 6)) {
+                    textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_X);
+                }
+                else if ((i % 8 == 3) || (i % 8 == 5)) {
+                    textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_Y);
+                }
+                else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
+                    textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_Y);
+                }
+            }
+
+            // initialize vertex byte buffer for shape coordinates
+            ByteBuffer bb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    squareCoords_WITH_PROCESSING.length * 4 :
+                    squareCoords_WITHOUT_PROCESSING.length * 4);
+            bb.order(ByteOrder.nativeOrder());
+            vertexBuffer = bb.asFloatBuffer();
+            vertexBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    squareCoords_WITH_PROCESSING :
+                    squareCoords_WITHOUT_PROCESSING);
+            vertexBuffer.position(0);
+
+            // initialize byte buffer for the draw list
+            ByteBuffer dlb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING.length * 2 :
+                    drawOrder_WITHOUT_PROCESSING.length * 2);
+            dlb.order(ByteOrder.nativeOrder());
+            drawListBuffer = dlb.asShortBuffer();
+            drawListBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING :
+                    drawOrder_WITHOUT_PROCESSING);
+            drawListBuffer.position(0);
+
+            ByteBuffer bb2 = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    textureVertices_WITH_PROCESSING.length * 4 :
+                    textureVertices_WITHOUT_PROCESSING.length * 4);
+            bb2.order(ByteOrder.nativeOrder());
+            textureVerticesBuffer = bb2.asFloatBuffer();
+            textureVerticesBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    textureVertices_WITH_PROCESSING :
+                    textureVertices_WITHOUT_PROCESSING);
+            textureVerticesBuffer.position(0);
 
             Matrix.setIdentityM(mSTMatrix, 0);
         }
@@ -132,7 +279,7 @@ class VideoSurfaceView extends GLSurfaceView {
         public void setVideoDecoder(VideoWorker vdt) {
             videoWorker = vdt;
         }
-        
+
         @Override
         public void onDrawFrame(GL10 glUnused) {
             //Log.d(TAG, "on draw");
@@ -152,77 +299,63 @@ class VideoSurfaceView extends GLSurfaceView {
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
-
-            mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
-            GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
-                TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-            checkGlError("glVertexAttribPointer maPosition");
-            GLES20.glEnableVertexAttribArray(maPositionHandle);
-            checkGlError("glEnableVertexAttribArray maPositionHandle");
-
-            mTriangleVertices.position(TRIANGLE_VERTICES_DATA_UV_OFFSET);
-            GLES20.glVertexAttribPointer(maTextureHandle, 3, GLES20.GL_FLOAT, false,
-                TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-            checkGlError("glVertexAttribPointer maTextureHandle");
-            GLES20.glEnableVertexAttribArray(maTextureHandle);
-            checkGlError("glEnableVertexAttribArray maTextureHandle");
-
-            Matrix.setIdentityM(mMVPMatrix, 0);
-            GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-            GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
-
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-            checkGlError("glDrawArrays");
-
 /*
-            ib.position(0);
-            GLES20.glReadPixels(0, 0, width, height, GLES20.GL_RGB , GLES20.GL_UNSIGNED_BYTE , ib );
-            for(int i=0, k=0; i<height; i++, k++)
-            {//remember, that OpenGL bitmap is incompatible with Android bitmap
-                //and so, some correction need.
-                for(int j=0; j<width; j++)
-                {
-                    int pix=b[i*width+j];
-                    int pb=(pix>>16)&0xff;
-                    int pr=(pix<<16)&0x00ff0000;
-                    int pix1=(pix&0xff00ff00) | pr | pb;
-                    bt[(height-k-1)*width+j]=pix1;
-                }
-            }
-
-            Bitmap sb=Bitmap.createBitmap(bt, width, height, Bitmap.Config.ARGB_8888);
+            // test
+            textureVertices[0] = (textureVertices[0] + 0.01f) % 1.0f;
+            Log.d(TAG, "textureVertices[0]: " + textureVertices[0]);
+            textureVerticesBuffer.position(0);
+            textureVerticesBuffer.put(textureVertices);
+            textureVerticesBuffer.position(0);
 */
-            /*
-            gst_gl_shader_set_uniform_matrix_4fv(shader, "u_transformation", 1, FALSE, identity_matrix);
-            GLES20.
-                    */
+            // Prepare the <insert shape here> coordinate data
+            int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    COORDS_PER_VERTEX_WITH_PROCESSING :
+                    COORDS_PER_VERTEX_WITHOUT_PROCESSING;
+
+            GLES20.glEnableVertexAttribArray(maPositionHandle);
+            GLES20.glVertexAttribPointer(maPositionHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, vertexBuffer);
+
+            GLES20.glEnableVertexAttribArray(maTextureHandle);
+            GLES20.glVertexAttribPointer(maTextureHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
+
+            float[] transMatrix = new float[16];
+            float[] scaleMatrix = new float[16];
+            Matrix.setIdentityM(mMVPMatrix, 0);
+            Matrix.setIdentityM(transMatrix, 0);
+            Matrix.setIdentityM(scaleMatrix, 0);
+            // Matrix.translateM(transMatrix, 0, -0.5f, -0.5f, 0.0f);
+            // Matrix.scaleM(scaleMatrix, 0, 2.0f, 2.0f, 0.0f);
+            Matrix.multiplyMM(mMVPMatrix, 0, transMatrix, 0, scaleMatrix, 0);
+            GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+            GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
+
+            /*GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+            checkGlError("glDrawArrays");
+            */
+            int drawOrderLength = processingMode == MainActivity.PROCESSING_MODE_WITH ?
+                    drawOrder_WITH_PROCESSING.length :
+                    drawOrder_WITHOUT_PROCESSING.length;
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderLength, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+            checkGlError("glDrawElements");
+
+            // Disable vertex array
+            GLES20.glDisableVertexAttribArray(maPositionHandle);
+            GLES20.glDisableVertexAttribArray(maTextureHandle);
 
             GLES20.glFinish();
-            
-
-
-            //GLES20.glReadPixels();
-            // int pixels[] = SavePixels(0, 0, width, height);
-            // Log.d(TAG, "pixels len: " + pixels.length);
-            //IntBuffer ib = SavePixels(0, 0, width, height);
-            //Log.d(TAG, "ib.limit(): " + ib.limit());
-
         }
 
         @Override
         public void onSurfaceChanged(GL10 glUnused, int newWidth, int newHeight) {
             width = newWidth;
             height = newHeight;
-            ib = IntBuffer.allocate(width * height);
-            b = new int[width * height];
-            bt = new int[width * height];
         	Log.d(TAG, "onsurfacechanged: " + width + ", " + height);
 
         }
-        
+
         @Override
         public void onSurfaceCreated(GL10 glUnused, EGLConfig config) {
-            mProgram = createProgram(mVertexShader, mFragmentShader);
+            mProgram = createProgram(VERTEX_SHADER_RESOURCE_ID, FRAGMENT_SHADER_RESOURCE_ID);
             if (mProgram == 0) {
                 return;
             }
@@ -284,7 +417,29 @@ class VideoSurfaceView extends GLSurfaceView {
             updateSurface = true;
         }
 
-        private int loadShader(int shaderType, String source) {
+        private String readTextFileFromResource(int resourceId) {
+            StringBuilder body = new StringBuilder();
+            try {
+                InputStream inputStream =
+                        context.getResources().openRawResource(resourceId);
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String nextLine;
+                while ((nextLine = bufferedReader.readLine()) != null) {
+                    body.append(nextLine);
+                    body.append('\n');
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Could not open resource: " + resourceId, e);
+            } catch (Resources.NotFoundException nfe) {
+                Log.e(TAG, "Resource not found: " + resourceId, nfe);
+            }
+            return body.toString();
+        }
+
+        private int loadShader(int shaderType, int resourceId) {
+            String source = readTextFileFromResource(resourceId);
+
             int shader = GLES20.glCreateShader(shaderType);
             if (shader != 0) {
                 GLES20.glShaderSource(shader, source);
@@ -301,12 +456,12 @@ class VideoSurfaceView extends GLSurfaceView {
             return shader;
         }
 
-        private int createProgram(String vertexSource, String fragmentSource) {
-            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource);
+        private int createProgram(int vertexResourceId, int fragmentResourceId) {
+            int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexResourceId);
             if (vertexShader == 0) {
                 return 0;
             }
-            int pixelShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource);
+            int pixelShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentResourceId);
             if (pixelShader == 0) {
                 return 0;
             }
@@ -339,34 +494,5 @@ class VideoSurfaceView extends GLSurfaceView {
         }
 
     }  // End of class VideoRender.
-
-    public static IntBuffer SavePixels(int x, int y, int w, int h){
-        //int b[]=new int[w*(y+h)];      // int ?
-        //int bt[]=new int[w*h];  // int ?
-        //IntBuffer ib = IntBuffer.wrap(b);
-        IntBuffer ib = IntBuffer.allocate(w * (y + h));
-        //ib.position(0);
-        //GLES20.glReadPixels(0, 0, w, h, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, ib);
-        GLES20.glReadPixels(0, 0, w, h, GLES20.GL_RGB , GLES20.GL_INT , ib );
-        //return b;
-        return ib;
-        /*
-        for(int i=0, k=0; i<h; i++, k++)
-        {//remember, that OpenGL bitmap is incompatible with Android bitmap
-            //and so, some correction need.
-            for(int j=0; j<w; j++)
-            {
-                int pix=b[i*w+j];
-                int pb=(pix>>16)&0xff;
-                int pr=(pix<<16)&0x00ff0000;
-                int pix1=(pix&0xff00ff00) | pr | pb;
-                bt[(h-k-1)*w+j]=pix1;
-            }
-        }
-
-        Bitmap sb=Bitmap.createBitmap(bt, w, h, Bitmap.Config.ARGB_8888);
-        return sb;
-        */
-    }
 
 }  // End of class VideoSurfaceView.
