@@ -181,7 +181,7 @@ public class MainActivity
         Matrix.setIdentityM(this.mSTMatrix, 0);
 
         if (getWorkerMode(getApplicationContext()) == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
-            this.videoWorker = new VideoWorkerNetwork();
+            this.videoWorker = new VideoWorkerNetwork(this);
         }
         else{
             this.videoWorker = new VideoWorkerLocal(getApplicationContext());
