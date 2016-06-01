@@ -126,6 +126,7 @@ public class VideoWorkerNetwork implements VideoWorker {
                     clientsocketUDP.receive(recv_packet);
                     //Log.d("UDP","T");
 
+                    //Log.d("UDP", ""+recv_packet.getLength());
 
                     //text("Received");
 
@@ -150,8 +151,8 @@ public class VideoWorkerNetwork implements VideoWorker {
                     lastCounter = tsp.counter;
 
                     if (diffCounter != 1) {
-                        //Log.d("TSP","DIFF = "+diffCounter);
-                        //continue;
+                        Log.d("TSP","DIFF = "+diffCounter);
+                        //first=true;
                     }
 
 
