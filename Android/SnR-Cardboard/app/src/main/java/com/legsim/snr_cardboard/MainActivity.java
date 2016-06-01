@@ -47,14 +47,7 @@ public class MainActivity
     final static int PROCESSING_MODE_WITH = 1;
     final static int PROCESSING_MODE_WITHOUT = 0;
 
-    /*
-    private static final int FLOAT_SIZE_BYTES = 4;
-    private static final int TRIANGLE_VERTICES_DATA_STRIDE_BYTES = 5 * FLOAT_SIZE_BYTES;
-    private static final int TRIANGLE_VERTICES_DATA_POS_OFFSET = 0;
-    private static final int TRIANGLE_VERTICES_DATA_UV_OFFSET = 3;
-    private final float[] mTriangleVerticesData = new float[]{-2.0f, -2.0f, 0.0f, 0.0f, 0.0f, 2.0f, -2.0f, 0.0f, 1.0f, 0.0f, -2.0f, 2.0f, 0.0f, 0.0f, 1.0f, 2.0f, 2.0f, 0.0f, 1.0f, 1.0f};
-    private FloatBuffer mTriangleVertices;
-    */
+
     private FloatBuffer vertexBuffer, textureVerticesBuffer;
     private ShortBuffer drawListBuffer;
 
@@ -66,10 +59,10 @@ public class MainActivity
     private final int vertexStride_WITHOUT_PROCESSING = COORDS_PER_VERTEX_WITHOUT_PROCESSING * 4; // 4 bytes per vertex
 
     private float squareCoords_WITHOUT_PROCESSING[] = {
-            -1.0f,  1.0f,
-            -1.0f, -1.0f,
-            1.0f, -1.0f,
-            1.0f,  1.0f,
+            -2.0f,  2.0f,
+            -2.0f,  -2.0f,
+            2.0f,   -2.0f,
+            2.0f,   2.0f,
     };
 
     private float textureVertices_WITHOUT_PROCESSING[] = {
@@ -112,64 +105,8 @@ public class MainActivity
 
     private final int vertexStride = COORDS_PER_VERTEX_WITH_PROCESSING * 4; // 4 bytes per vertex
 
-    private float squareCoords_WITH_PROCESSING[] = {
-            // zone 1
-            -1f,            1f,
-            -1f,            -1f,
-            -1f + (X / L),  -1f,
-            -1f + (X / L),  1f,
-            // zone 2
-            X / L,          1f,
-            X / L,          -1f,
-            1f,             -1f,
-            1f,             1f,
-            // zone 3
-            -1f + (X / L),  1f,
-            -1f + (X / L),  1f - (2f * Y / H),
-            X / L,          1f - (2f * Y / H),
-            X / L,          1f,
-            // ROI
-            -1f + (X / L),  1f - (2f* Y / H),
-            -1f + (X / L),  - 2f * Y / H,
-            X / L,          - 2f * Y / H,
-            X / L,          1 - (2f * Y / H),
-            // zone 4
-            -1f + (X / L),  -2f * Y / H,
-            -1f + (X / L),  -1f,
-            X / L,          -1f,
-            X / L,          -2f * Y / H
-    };
-
     private final static float VERTICE_MARGE_X = 1f / 1920f;
     private final static float VERTICE_MARGE_Y = 1f / 1080f;
-
-    private float textureVertices_WITH_PROCESSING[] = {
-            // zone 1
-            0f,             1f,
-            0f,             1f / 2f,
-            X / (2f * L),   1f / 2f,
-            X / (2f * L),   1f,
-            // zone 2
-            X / (2f * L),   1f,
-            X / (2f * L),   1f / 2f,
-            1f / 2f,        1f / 2f,
-            1f / 2f,        1f,
-            // zone 3
-            1f / 2f,        1f,
-            1f / 2f,        1f - (Y / (2f * H)),
-            1f,             1f - (Y / (2f * H)),
-            1f,             1f,
-            // ROI
-            0f,             1f / 2f,
-            0f,             0f,
-            1f,             0f,
-            1f,             1f / 2f,
-            // zone 4
-            1f / 2f,        1- (Y /(2f * H)),
-            1f / 2f,        3f / 4f,
-            1f,             3f / 4f,
-            1f,             1- (Y /(2f * H))
-    };
 
 
     private final String mVertexShader = "uniform mat4 uMVPMatrix;\nuniform mat4 uSTMatrix;\nattribute vec4 aPosition;\nattribute vec4 aTextureCoord;\nvarying vec2 vTextureCoord;\nvoid main() {\n  gl_Position = uMVPMatrix * aPosition;\n  vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n}\n";
@@ -207,69 +144,39 @@ public class MainActivity
         */
         processingMode = MainActivity.getProcessingMode(getApplicationContext());
 
-        // TODO to be static
-        for (int i = 0; i < squareCoords_WITH_PROCESSING.length; i++){
-            squareCoords_WITH_PROCESSING[i] *= 2;
+        float squareCoords[];
+        short drawOrder[];
+        float textureVertices[];
+        if (processingMode == MainActivity.PROCESSING_MODE_WITH){
+            squareCoords = getSquareCoords_WITH_PROCESSING(X, Y, L, H);
+            drawOrder = drawOrder_WITH_PROCESSING;
+            textureVertices = getTextureVertices_WITH_PROCESSING(X, Y, L, H);
         }
-        for (int i = 0; i < squareCoords_WITHOUT_PROCESSING.length; i++){
-            squareCoords_WITHOUT_PROCESSING[i] *= 2;
-        }
-
-        // ajout de marge sur les vertices
-        for(int i = 0; i < textureVertices_WITH_PROCESSING.length; i++){
-            float facteur;
-            if (i <= 15) {  // zone 1 ou 2
-                facteur = 1;
-            }
-            else {
-                facteur = 1;
-            }
-
-            if ((i % 8 == 0) || (i % 8 == 2)) {
-                textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_X);
-            }
-            else if ((i % 8 == 4) || (i % 8 == 6)) {
-                textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_X);
-            }
-            else if ((i % 8 == 3) || (i % 8 == 5)) {
-                textureVertices_WITH_PROCESSING[i] += (facteur * VERTICE_MARGE_Y);
-            }
-            else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
-                textureVertices_WITH_PROCESSING[i] -= (facteur * VERTICE_MARGE_Y);
-            }
+        else{
+            squareCoords = squareCoords_WITHOUT_PROCESSING;
+            drawOrder = drawOrder_WITHOUT_PROCESSING;
+            textureVertices = textureVertices_WITHOUT_PROCESSING;
         }
 
         // initialize vertex byte buffer for shape coordinates
-        ByteBuffer bb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                squareCoords_WITH_PROCESSING.length * 4 :
-                squareCoords_WITHOUT_PROCESSING.length * 4);
+        ByteBuffer bb = ByteBuffer.allocateDirect(squareCoords.length * 4);
         bb.order(ByteOrder.nativeOrder());
         vertexBuffer = bb.asFloatBuffer();
-        vertexBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                squareCoords_WITH_PROCESSING :
-                squareCoords_WITHOUT_PROCESSING);
+        vertexBuffer.put(squareCoords);
         vertexBuffer.position(0);
 
-        // initialize byte buffer for the draw list
-        ByteBuffer dlb = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                drawOrder_WITH_PROCESSING.length * 2 :
-                drawOrder_WITHOUT_PROCESSING.length * 2);
-        dlb.order(ByteOrder.nativeOrder());
-        drawListBuffer = dlb.asShortBuffer();
-        drawListBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                drawOrder_WITH_PROCESSING :
-                drawOrder_WITHOUT_PROCESSING);
-        drawListBuffer.position(0);
-
-        ByteBuffer bb2 = ByteBuffer.allocateDirect(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                textureVertices_WITH_PROCESSING.length * 4 :
-                textureVertices_WITHOUT_PROCESSING.length * 4);
+        ByteBuffer bb2 = ByteBuffer.allocateDirect(textureVertices.length * 4);
         bb2.order(ByteOrder.nativeOrder());
         textureVerticesBuffer = bb2.asFloatBuffer();
-        textureVerticesBuffer.put(processingMode == MainActivity.PROCESSING_MODE_WITH ?
-                textureVertices_WITH_PROCESSING :
-                textureVertices_WITHOUT_PROCESSING);
+        textureVerticesBuffer.put(textureVertices);
         textureVerticesBuffer.position(0);
+
+        // initialize byte buffer for the draw list
+        ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
+        dlb.order(ByteOrder.nativeOrder());
+        drawListBuffer = dlb.asShortBuffer();
+        drawListBuffer.put(drawOrder);
+        drawListBuffer.position(0);
 
         Matrix.setIdentityM(this.mSTMatrix, 0);
 
@@ -291,39 +198,30 @@ public class MainActivity
                 this.updateSurface = false;
             }
         }
+
         this.head = headTransform;
-        /*
-        GLES20.glClearColor((float)1.0f, (float)1.0f, (float)0.0f, (float)1.0f);
-        GLES20.glClear((int)16640);
-        GLES20.glUseProgram((int)this.mProgram);
-        this.checkGlError("glUseProgram");
-        GLES20.glActiveTexture((int)33984);
-        GLES20.glBindTexture((int)GL_TEXTURE_EXTERNAL_OES, (int)this.mTextureID);
-        this.mTriangleVertices.position(0);
-        GLES20.glVertexAttribPointer((int)this.maPositionHandle, (int)3, (int)5126, (boolean)false, (int)20, (Buffer)this.mTriangleVertices);
-        this.checkGlError("glVertexAttribPointer maPosition");
-        GLES20.glEnableVertexAttribArray((int)this.maPositionHandle);
-        this.checkGlError("glEnableVertexAttribArray maPositionHandle");
-        this.mTriangleVertices.position(3);
-        GLES20.glVertexAttribPointer((int)this.maTextureHandle, (int)3, (int)5126, (boolean)false, (int)20, (Buffer)this.mTriangleVertices);
-        this.checkGlError("glVertexAttribPointer maTextureHandle");
-        GLES20.glEnableVertexAttribArray((int)this.maTextureHandle);
-        this.checkGlError("glEnableVertexAttribArray maTextureHandle");
-        float[] transMatrix = new float[16];
-        Matrix.setIdentityM((float[])transMatrix, (int)0);
-        Matrix.translateM((float[])transMatrix, (int)0, (float)150.0f, (float)150.0f, (float)0.0f);
-        Matrix.multiplyMM((float[])transMatrix, (int)0, (float[])this.mMVPMatrix, (int)0, (float[])transMatrix, (int)0);
-        GLES20.glUniformMatrix4fv((int)this.muMVPMatrixHandle, (int)1, (boolean)false, (float[])transMatrix, (int)0);
-        GLES20.glUniformMatrix4fv((int)this.muSTMatrixHandle, (int)1, (boolean)false, (float[])this.mSTMatrix, (int)0);
-        GLES20.glDrawArrays((int)5, (int)0, (int)4);
-        this.checkGlError("glDrawArrays");
-        GLES20.glFinish();
-        Matrix.setLookAtM((float[])this.camera, (int)0, (float)0.0f, (float)0.0f, (float)0.01f, (float)0.0f, (float)0.0f, (float)0.0f, (float)0.0f, (float)1.0f, (float)0.0f);
-        MainActivity.checkGLError("onReadyToDraw");
-        */
     }
 
     public void onDrawEye(Eye eye) {
+        float squareCoords[];
+        float textureVertices[];
+        if (processingMode == MainActivity.PROCESSING_MODE_WITH){
+            squareCoords = getSquareCoords_WITH_PROCESSING(X, Y, L, H);
+            textureVertices = getTextureVertices_WITH_PROCESSING(X, Y, L, H);
+        }
+        else{
+            squareCoords = squareCoords_WITHOUT_PROCESSING;
+            textureVertices = textureVertices_WITHOUT_PROCESSING;
+        }
+
+        vertexBuffer.clear();
+        vertexBuffer.put(squareCoords);
+        vertexBuffer.position(0);
+
+        textureVerticesBuffer.clear();
+        textureVerticesBuffer.put(textureVertices);
+        textureVerticesBuffer.position(0);
+
         GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
 
@@ -333,21 +231,6 @@ public class MainActivity
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
 
-        /*
-        mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
-        GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
-                TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-        checkGlError("glVertexAttribPointer maPosition");
-        GLES20.glEnableVertexAttribArray(maPositionHandle);
-        checkGlError("glEnableVertexAttribArray maPositionHandle");
-
-        mTriangleVertices.position(TRIANGLE_VERTICES_DATA_UV_OFFSET);
-        GLES20.glVertexAttribPointer(maTextureHandle, 3, GLES20.GL_FLOAT, false,
-                TRIANGLE_VERTICES_DATA_STRIDE_BYTES, mTriangleVertices);
-        this.checkGlError("glVertexAttribPointer maTextureHandle");
-        GLES20.glEnableVertexAttribArray(maTextureHandle);
-        this.checkGlError("glEnableVertexAttribArray maTextureHandle");
-        */
         int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 COORDS_PER_VERTEX_WITH_PROCESSING :
                 COORDS_PER_VERTEX_WITHOUT_PROCESSING;
@@ -391,10 +274,6 @@ public class MainActivity
         GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, transMatrix, 0);
         GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
 
-        /*
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-        this.checkGlError("glDrawArrays");
-        */
         int drawOrderLength = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 drawOrder_WITH_PROCESSING.length :
                 drawOrder_WITHOUT_PROCESSING.length;
@@ -607,5 +486,99 @@ public class MainActivity
         SharedPreferences sharedPref = context.getSharedPreferences(
                 MainActivity.PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
         return sharedPref.getInt(key, defValue);
+    }
+
+    private static float[] getSquareCoords_WITH_PROCESSING(float x, float y, float l, float h){
+        float[] res = new float[]{
+            // zone 1
+            -1f, 1f,
+            -1f, -1f,
+            -1f + (x / l), -1f,
+            -1f + (x / l), 1f,
+            // zone 2
+            x / l, 1f,
+            x / l, -1f,
+            1f, -1f,
+            1f, 1f,
+            // zone 3
+            -1f + (x / l), 1f,
+            -1f + (x / l), 1f - (2f * y / h),
+            x / l, 1f - (2f * y / h),
+            x / l, 1f,
+            // ROI
+            -1f + (x / l), 1f - (2f * y / h),
+            -1f + (x / l), -2f * y / h,
+            x / l, -2f * y / h,
+            x / l, 1 - (2f * y / h),
+            // zone 4
+            -1f + (x / l), -2f * y / h,
+            -1f + (x / l), -1f,
+            x / l, -1f,
+            x / l, -2f * y / h
+        };
+
+        // TODO a inclure dans le tab ci-dessus
+        for (int i = 0; i < res.length; i++) {
+            res[i] *= 2;
+        }
+
+        return res;
+    }
+
+    private static float[] getTextureVertices_WITH_PROCESSING(float x, float y, float l, float h){
+        float[] res = new float[] {
+            // zone 1
+            0f,             1f,
+            0f,             1f / 2f,
+            x / (2f * l),   1f / 2f,
+            x / (2f * l),   1f,
+            // zone 2
+            x / (2f * l),   1f,
+            x / (2f * l),   1f / 2f,
+            1f / 2f,        1f / 2f,
+            1f / 2f,        1f,
+            // zone 3
+            1f / 2f,        1f,
+            1f / 2f,        1f - (y / (2f * h)),
+            1f,             1f - (y / (2f * h)),
+            1f,             1f,
+            // ROI
+            0f,             1f / 2f,
+            0f,             0f,
+            1f,             0f,
+            1f,             1f / 2f,
+            // zone 4
+            1f / 2f,        1- (y /(2f * h)),
+            1f / 2f,        3f / 4f,
+            1f,             3f / 4f,
+            1f,             1- (y /(2f * h))
+        };
+
+        // TODO a inclure dans le tab ci-dessus
+        // ajout de marge sur les vertices
+        for(int i = 0; i < res.length; i++){
+            float facteur;
+            if (i <= 15) {  // zone 1 ou 2
+                facteur = 1;
+            }
+            else {
+                facteur = 1;
+            }
+
+            if ((i % 8 == 0) || (i % 8 == 2)) {
+                res[i] += (facteur * VERTICE_MARGE_X);
+            }
+            else if ((i % 8 == 4) || (i % 8 == 6)) {
+                res[i] -= (facteur * VERTICE_MARGE_X);
+            }
+            else if ((i % 8 == 3) || (i % 8 == 5)) {
+                res[i] += (facteur * VERTICE_MARGE_Y);
+            }
+            else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
+                res[i] -= (facteur * VERTICE_MARGE_Y);
+            }
+        }
+
+        return res;
     }
 }
