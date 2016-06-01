@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InterfaceAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -39,6 +38,8 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     private MainActivity mAct;
 
+    int firstImage = -1;
+    int lastImage = 0;
     double lastPTS = 0;
     int lastCounter = 0;
     boolean stop;
@@ -51,6 +52,8 @@ public class VideoWorkerNetwork implements VideoWorker {
 
         }
 
+        zoiX = -1;
+        zoiY = -1;
         zoiPos = new HashMap<>();
 
         threadVideo = new Thread(new VideoReceiverRunnable());
@@ -77,6 +80,11 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     public void finish() {
         this.stop = true;
+    }
+
+    public void updateZoi(int x, int y) {
+        zoiX = x;
+        zoiY = y;
     }
 
     public class VideoReceiverRunnable implements Runnable {
@@ -115,6 +123,27 @@ public class VideoWorkerNetwork implements VideoWorker {
                     MediaFormat bufferFormat = codec.getOutputFormat(index);
 
                     //Log.d("Display", info.presentationTimeUs / 1000000.0 + "");
+
+                    int imgCount = (int) (info.presentationTimeUs * 10 / 1000000);
+
+                    if (firstImage == -1) {
+                        firstImage = imgCount;
+                    }
+
+                    imgCount -= firstImage;
+
+                    Log.d("IMGCOUNT", "" + imgCount);
+
+                    int pos[] = null;
+                    for (int i = lastImage; i <= imgCount; i++) {
+                        pos = zoiPos.get(i);
+                    }
+
+                    if (pos != null) {
+                        Log.d("New position",pos[0]+";"+pos[1]);
+                    }
+
+                    lastImage = imgCount;
 
                     codec.releaseOutputBuffer(index, info.presentationTimeUs);
 
@@ -248,21 +277,26 @@ public class VideoWorkerNetwork implements VideoWorker {
 
                 while (!stop) {
 
-                    outToServer.write("100,200\n".getBytes());
-                    outToServer.flush();
+                    if (zoiX != -1) {
+                        outToServer.write((zoiX+","+zoiY+"\n").getBytes());
+                        outToServer.flush();
+                        zoiX = -1;
+                    }
 
-                    String s = inFromServer.readLine();
-                    Log.d("TCP",s);
-                    String args[] = s.split(";");
-                    String cmd = args[0];
-                    if (cmd.equals("POS")) {
-                        int imgCount = Integer.parseInt(args[1]);
-                        int newX = Integer.parseInt(args[2]);
-                        int newY = Integer.parseInt(args[3]);
-                        Log.d("POS", imgCount + " - " + newX + " - " + newY);
+                    if (inFromServer.ready()) {
+                        String s = inFromServer.readLine();
+                        Log.d("TCP", s);
+                        String args[] = s.split(";");
+                        String cmd = args[0];
+                        if (cmd.equals("POS")) {
+                            int imgCount = Integer.parseInt(args[1]);
+                            int newX = Integer.parseInt(args[2]);
+                            int newY = Integer.parseInt(args[3]);
+                            Log.d("POS", imgCount + " - " + newX + " - " + newY);
 
-                        zoiPos.put(imgCount, new int[]{newX, newY});
+                            zoiPos.put(imgCount, new int[]{newX, newY});
 
+                        }
                     }
                 }
 

@@ -9,4 +9,5 @@ public interface VideoWorker {
     void configure(Surface surface);
     void start();
     void finish();
+    void updateZoi(int x, int y);
 }

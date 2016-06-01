@@ -33,6 +33,11 @@ public class VideoWorkerLocal extends Thread implements VideoWorker{
         this.stop = true;
     }
 
+    @Override
+    public void updateZoi(int x, int y) {
+
+    }
+
     public void configure(Surface surface) {
         extractor = new MediaExtractor();
         try {

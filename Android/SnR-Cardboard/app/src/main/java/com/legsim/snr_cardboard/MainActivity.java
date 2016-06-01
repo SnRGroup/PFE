@@ -519,6 +519,10 @@ public class MainActivity
         }
     }
 
+    public void onCardboardTrigger() {
+        videoWorker.updateZoi((int)(Math.random()*200),(int)(Math.random()*200));
+    }
+
     protected void onImageBtnSettings(View view){
         final AlertDialog.Builder alertDialog =   new AlertDialog.Builder(MainActivity.this);
         alertDialog.setTitle("Settings");
