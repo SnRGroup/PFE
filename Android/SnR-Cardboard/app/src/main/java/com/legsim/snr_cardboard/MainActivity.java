@@ -4,11 +4,14 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Parcel;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -47,6 +50,8 @@ public class MainActivity
     final static int PROCESSING_MODE_WITH = 1;
     final static int PROCESSING_MODE_WITHOUT = 0;
 
+
+    private Surface surface;
 
     private FloatBuffer vertexBuffer, textureVerticesBuffer;
     private ShortBuffer drawListBuffer;
@@ -196,6 +201,7 @@ public class MainActivity
                 this.mSurface.updateTexImage();
                 this.mSurface.getTransformMatrix(this.mSTMatrix);
                 this.updateSurface = false;
+
             }
         }
 
@@ -206,8 +212,8 @@ public class MainActivity
         float squareCoords[];
         float textureVertices[];
         if (processingMode == MainActivity.PROCESSING_MODE_WITH){
-            squareCoords = getSquareCoords_WITH_PROCESSING(X, Y, L, H);
-            textureVertices = getTextureVertices_WITH_PROCESSING(X, Y, L, H);
+            squareCoords = getSquareCoords_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
+            textureVertices = getTextureVertices_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
         }
         else{
             squareCoords = squareCoords_WITHOUT_PROCESSING;
@@ -230,6 +236,9 @@ public class MainActivity
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
+
+
+
 
         int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 COORDS_PER_VERTEX_WITH_PROCESSING :
@@ -283,6 +292,7 @@ public class MainActivity
         // Disable vertex array
         GLES20.glDisableVertexAttribArray(maPositionHandle);
         GLES20.glDisableVertexAttribArray(maTextureHandle);
+
 
         GLES20.glFinish();
     }
@@ -384,10 +394,12 @@ public class MainActivity
                 GLES20.GL_LINEAR);
 
         mSurface = new SurfaceTexture(mTextureID);
+
         mSurface.setOnFrameAvailableListener(this);
 
         Surface surface = new Surface(mSurface);
 
+        this.surface = surface;
         videoWorker.configure(surface);
 
         synchronized(this) {
