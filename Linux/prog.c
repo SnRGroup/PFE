@@ -351,7 +351,7 @@ int main() {
 		//
 
 		char destination[100];
-		//shared->ip="192.168.1.81";
+
 		sprintf(destination,"udp://%s:%d?pkt_size=188",shared->ip,UDP_PORT);
 
 		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", "1000k", 
