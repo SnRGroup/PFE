@@ -1,0 +1,4 @@
+ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0  -pix_fmt yuv420p -bufsize 0 -f rawvideo - 2>/dev/null | ./prog
+
+ffmpeg -i udp://127.0.0.1:1235 -f rawvideo - 2>/dev/null | ./receiver 127.0.0.1
+
