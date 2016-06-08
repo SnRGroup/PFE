@@ -10,12 +10,12 @@ int blocPos(int width, int x, int y) {
 	return pos;
 }
 
-void readBloc(unsigned char *source, bloc_t *bloc, int blocId) {
-	int posX = (blocId*2)%WIDTH;
-	int posY = (blocId*2/WIDTH)*2;
+void readBloc(unsigned char *source, int width, bloc_t *bloc, int blocId) {
+	int posX = (blocId*2)%width;
+	int posY = (blocId*2/width)*2;
 	//int posX = blocId*2 - posY*(WIDTH/2);
-	int startPos = posY*WIDTH+posX;
-	int offsetY = WIDTH*HEIGHT;
+	int startPos = posY*width+posX;
+	int offsetY = width*HEIGHT;
 	int posCb = offsetY + blocId;
 	int posCr = posCb + offsetY/4;
 	bloc->y[0] = source[startPos];
@@ -26,7 +26,7 @@ void readBloc(unsigned char *source, bloc_t *bloc, int blocId) {
 	bloc->cr = source[posCr];
 }
 
-void writeBloc(unsigned char *dest, int width, bloc_t *bloc, int blocId) {
+void writeBloc(unsigned char *dest, int width, bloc_t *bloc, int blocId) {	
 	int posX = (blocId*2)%width;
 	int posY = (blocId*2/width)*2;
 	int startPos = posY*width+posX;
@@ -38,17 +38,17 @@ void writeBloc(unsigned char *dest, int width, bloc_t *bloc, int blocId) {
 	dest[startPos+width] = bloc->y[2];
 	dest[startPos+width+1] = bloc->y[3];
 	dest[posCb] = bloc->cb;
-	dest[posCr] = bloc->cr;
+	dest[posCr] = bloc->cr;	
 }
 
 
-void readBlocs(unsigned char *source, bloc_t *blocs, int x, int y, int w, int h) {
-	int startBloc = blocPos(WIDTH, x, y);
+void readBlocs(unsigned char *source, int width, bloc_t *blocs, int x, int y, int w, int h) {
+	int startBloc = blocPos(width, x, y);
 	bloc_t *ptr = blocs;
 	for (int j=0; j<h/2; j++) {
 		for (int i=0; i<w/2; i++) {
-			int blocIdx = startBloc + (j*WIDTH/2)+i;
-			readBloc(source, ptr++, blocIdx);
+			int blocIdx = startBloc + (j*width/2)+i;
+			readBloc(source, width, ptr++, blocIdx);
 		}
 	}	
 }
@@ -90,18 +90,45 @@ bloc_t* downSampleBlocs(bloc_t *blocs, int w, int h, int divider) {
 
 			bloc_t bf;
 
-			bf.y[0] = moyLuminance(&b1);
-			bf.y[1] = moyLuminance(&b2);
-			bf.y[2] = moyLuminance(&b3);
-			bf.y[3] = moyLuminance(&b4);
+			bf.y[0] = b1.y[0];
+			bf.y[1] = b1.y[0];
+			bf.y[2] = b1.y[0];
+			bf.y[3] = b1.y[0];
 
-			bf.cb = (b1.cb + b2.cb + b3.cb + b4.cb)/4;
-			bf.cr = (b1.cr + b2.cr + b3.cr + b4.cr)/4;
+			bf.cb = b1.cb;
+			bf.cr = b1.cr;
 
 
 			memcpy(ptr, &bf, sizeof(bloc_t));
 			ptr++;
 
+		}
+	}
+	return blocs2;
+}
+
+bloc_t* upSampleBlocs(bloc_t *blocs, int w, int h, int multiplier) {
+	bloc_t *blocs2 = malloc(w*multiplier/2*h*multiplier/2*sizeof(bloc_t));
+	bloc_t *ptr = blocs2;
+	// i et j : indices des blocs de fin
+	for (int j=0; j<(h*multiplier/2); j++) {
+		for (int i=0; i<(w*multiplier/2); i++) {
+			bloc_t b1;
+			int startPos = i/multiplier + (j/multiplier*(w/2));
+			b1 = blocs[startPos];
+
+			bloc_t bf;
+			int offset = (i%2) + 2*(j%2);
+			bf.y[0] = b1.y[offset];
+			bf.y[1] = b1.y[offset];
+			bf.y[2] = b1.y[offset];
+			bf.y[3] = b1.y[offset];
+			bf.cb = b1.cb;
+			bf.cr = b1.cr;
+
+			memcpy(ptr, &bf, sizeof(bloc_t));
+			ptr++;
+		
 		}
 	}
 	return blocs2;

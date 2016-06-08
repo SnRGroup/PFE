@@ -16,11 +16,7 @@
 #include "types.h"
 #include "video.h"
 
-#define TCP_PORT 1234
-#define UDP_PORT 1235
-
 static int zoiStartBloc;
-
 
 int pipeToF[2];
 int pipeFromF[2];
@@ -79,36 +75,36 @@ void *task_video(void *data) {
 
 		//zoiStartBloc++;
 
-		//zoiX++;
-		//zoiY++;
+		zoiX = 200;
+		zoiY = 200;
 
 		bloc_t *blocs = malloc(WIDTH/2*HEIGHT/2*sizeof(bloc_t));
 		bloc_t *blocsDown;
 
 		// ZOI	
-		readBlocs(buffer, blocs, zoiX, zoiY, ZOIW, ZOIH);
+		readBlocs(buffer, WIDTH, blocs, zoiX, zoiY, ZOIW, ZOIH);
 		writeBlocs(buffer2, WIDTH/2, blocs, 0, HEIGHT-ZOIH, ZOIW, ZOIH);
 
 		// LEFT SIDE
-		readBlocs(buffer, blocs, 0, 0, zoiX, HEIGHT);
+		readBlocs(buffer, WIDTH, blocs, 0, 0, zoiX, HEIGHT);
 		blocsDown = downSampleBlocs(blocs, zoiX, HEIGHT, 2);	
 		writeBlocs(buffer2, WIDTH/2, blocsDown, 0, 0, zoiX/2, HEIGHT/2);
 		free(blocsDown);
 
 		// RIGHT SIDE
-		readBlocs(buffer, blocs, zoiX+ZOIW, 0, WIDTH-(zoiX+ZOIW), HEIGHT);
+		readBlocs(buffer, WIDTH, blocs, zoiX+ZOIW, 0, WIDTH-(zoiX+ZOIW), HEIGHT);
 		blocsDown = downSampleBlocs(blocs, WIDTH-(zoiX+ZOIW), HEIGHT, 2);
 		writeBlocs(buffer2, WIDTH/2, blocsDown, zoiX/2, 0, (WIDTH-(zoiX+ZOIW))/2, HEIGHT/2);
 		free(blocsDown);
 
 		// TOP BLOCK
-		readBlocs(buffer, blocs, zoiX, 0, ZOIW, zoiY);
+		readBlocs(buffer, WIDTH, blocs, zoiX, 0, ZOIW, zoiY);
 		blocsDown = downSampleBlocs(blocs, ZOIW, zoiY, 2);
 		writeBlocs(buffer2, WIDTH/2, blocsDown, WIDTH/4, 0, ZOIW/2, zoiY/2);
 		free(blocsDown);
 
 		// BOTTOM BLOCK
-		readBlocs(buffer, blocs, zoiX, zoiY + ZOIH, ZOIW, HEIGHT-(zoiY+ZOIH));
+		readBlocs(buffer, WIDTH, blocs, zoiX, zoiY + ZOIH, ZOIW, HEIGHT-(zoiY+ZOIH));
 		blocsDown = downSampleBlocs(blocs, ZOIW, HEIGHT-(zoiY+ZOIH), 2);
 		writeBlocs(buffer2, WIDTH/2, blocsDown, WIDTH/4, zoiY/2, ZOIW/2, (HEIGHT-(zoiY+ZOIH))/2);
 		free(blocsDown);
@@ -355,7 +351,7 @@ int main() {
 		//
 
 		char destination[100];
-		//shared->ip="192.168.1.189";
+
 		sprintf(destination,"udp://%s:%d?pkt_size=188",shared->ip,UDP_PORT);
 
 		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", "1000k", 

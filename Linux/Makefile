@@ -1,10 +1,28 @@
-all: prog
+all: prog receiver
+
+runProg: prog
+	ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0  -pix_fmt yuv420p -bufsize 0 -f rawvideo - 2>/dev/null | ./prog
 
 prog: prog.o video.o
-	gcc -lm -lpthread -o prog prog.o video.o
+	gcc -o prog prog.o video.o -lm -lpthread 
 
 prog.o: prog.c
 	gcc -std=c11 -Ofast -o prog.o -c prog.c
 
+runReceiver: receiver
+	ffmpeg -i udp://127.0.0.1:1235 -f rawvideo -pix_fmt yuv420p - 2>/dev/null | ./receiver 127.0.0.1
+
+runRP: receiver	
+	ffmpeg -i udp://192.168.1.171:1235 -f rawvideo -pix_fmt yuv420p - 2>/dev/null | ./receiver 192.168.1.171
+
+receiver: receiver.o video.o
+	gcc -o receiver receiver.o video.o -lm -lpthread -lSDLmain -lSDL
+
+receiver.o: receiver.c
+	gcc -std=c11 -Ofast -o receiver.o -c receiver.c
+
 video.o: video.c
 	gcc -std=c11 -Ofast -o video.o -c video.c
+
+clean:
+	rm prog receiver *.o

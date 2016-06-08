@@ -7,4 +7,10 @@
 #define ZOIW 640
 #define ZOIH 360
 
+#define WIDTH_2 640
+#define HEIGHT_2 720
+
+#define TCP_PORT 1234
+#define UDP_PORT 1235
+
 #endif
