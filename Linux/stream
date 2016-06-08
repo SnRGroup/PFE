@@ -1,4 +1,4 @@
-ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video1 -pix_fmt yuv420p -bufsize 0 -f rawvideo - 2>/dev/null |
+ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0 -vf lenscorrection=k1=-0.4:k2=0:cx=0.46:cy=0.42 -pix_fmt yuv420p -bufsize 0 -f rawvideo - 2>/dev/null |
 #ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0 -pix_fmt yuv420p -bufsize 0 -f rawvideo - 2>/dev/null |
 #ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0 -vf pad=1664:936:192:108 -pix_fmt yuv420p -bufsize 0 -f rawvideo - |
 #ffmpeg -f rawvideo -s 1664x936 -r 10 -i - -vf lenscorrection=k1=$1:k2=$2 -bufsize 0 -f rawvideo - |
