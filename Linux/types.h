@@ -1,10 +1,11 @@
 #ifndef TYPES_H_
 #define TYPES_H_
+#include <stdint.h>
 
 typedef struct model_bloc {
-	char y[4];
-	char cb;
-	char cr;
+	uint8_t y[4];
+	uint8_t cb;
+	uint8_t cr;
 } bloc_t;
 
 

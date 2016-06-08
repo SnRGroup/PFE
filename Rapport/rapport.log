@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Arch Linux) (preloaded format=pdflatex 2015.12.7)  7 JUN 2016 16:52
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015/Arch Linux) (preloaded format=pdflatex 2015.12.7)  8 JUN 2016 09:55
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -302,42 +302,48 @@ Package babel Info: Making ? an active character on input line 359.
 (/usr/share/texmf-dist/tex/latex/graphics/keyval.sty
 Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
 \KV@toks@=\toks16
+)
+(/usr/share/texmf-dist/tex/latex/preprint/fullpage.sty
+Package: fullpage 1999/02/23 1.1 (PWD)
+\FP@margin=\skip49
 ) (./rapport.aux)
 \openout1 = `rapport.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Info: Redefining \degres on input line 6.
-LaTeX Info: Redefining \dots on input line 6.
-LaTeX Info: Redefining \up on input line 6.
- [1
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 7.
+LaTeX Font Info:    ... okay on input line 7.
+LaTeX Info: Redefining \degres on input line 7.
+LaTeX Info: Redefining \dots on input line 7.
+LaTeX Info: Redefining \up on input line 7.
+
+[1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] (./rapport.aux) ) 
 Here is how much of TeX's memory you used:
- 1726 strings out of 493054
- 21126 string characters out of 6140586
+ 1750 strings out of 493054
+ 21506 string characters out of 6140586
  83439 words of memory out of 5000000
- 5292 multiletter control sequences out of 15000+600000
- 4709 words of font info for 16 fonts, out of 8000000 for 9000
+ 5310 multiletter control sequences out of 15000+600000
+ 6252 words of font info for 18 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 28i,4n,30p,154b,439s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 28i,4n,30p,175b,439s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/sha
 re/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texmf-dist/f
-onts/type1/public/cm-super/sfrm1095.pfb>
-Output written on rapport.pdf (1 page, 13159 bytes).
+onts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf-dist/fonts/type1/publ
+ic/cm-super/sfrm1095.pfb>
+Output written on rapport.pdf (1 page, 26842 bytes).
 PDF statistics:
- 13 PDF objects out of 1000 (max. 8388607)
- 8 compressed objects within 1 object stream
+ 17 PDF objects out of 1000 (max. 8388607)
+ 11 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
