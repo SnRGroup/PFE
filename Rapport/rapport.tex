@@ -6,9 +6,54 @@
 
 \begin{document}
 
+Page de garde
+
+\newpage
+
 \section{Présentation du projet}
 
+\subsection{Objectif général}
+L'objectif général de notre projet de fin d'études, dit \textit{PFE}, est d'étudier et de mettre en place une chaîne de transmission vidéo.
+Nous ferons une étude technique et la réalisation de l'ensemble des étapes : de la station émettrice au récepteur, en passant par les techniques de mise en réseau.
+
+\bigbreak
+Nous avons décidé de nous intéresser plus particulièrement à l'amélioration de la qualité d'une zone géographique d'un flux vidéo, au détriment du reste de la vidéo.
+
+Ce principe peut se révéler intéressant dans des cas où le consommateur d'un flux vidéo ne serait intéressé que par une zone précise d'une image capturée par une caméra, tout en étant susceptible de changer de zone d'intérêt à tout instant.
+La zone d'intérêt est choisie et commandée par le client récepteur du flux vidéo, afin que l'émetteur puisse adapter la zone d’intérêt pour la suite de la transmission.
+
+\bigbreak
+Nous essaierons de faire des choix technologiques les plus simples et compréhensibles possibles et d'assurer une interopérabilité entre différentes plateformes matérielles et logicielles.
+
+\subsection{Cas d'application}
+
+Afin d'illustrer ce système en pratique, nous l'implémenterons au sein d'une solution de transmission vidéo distante en réalité virtuelle.
+Une station émettrice mobile capture un flux vidéo provenant d'une caméra à grand angle et transmet un flux qui sera alors reçu sur un autre terminal mobile n'affichant qu'une zone précise de l'image à travers une solution de réalité virtuelle de type Google Cardboard.
+Le terminal est donc déplacé avec les mouvements de tête du spectateur et la zone de visionnage est donc déplacée en conséquence pour obtenir un effet immersif.
+La nouvelle région d’intérêt est renvoyée du terminal mobile à l'émetteur pour faire à nouveau coïncider la zone visionnée avec la région d'intérêt à qualité améliorée.
+
+\subsection{Contraintes qualitatives}
+
+Nous avons la contrainte de transmettre l’ensemble de la vidéo pour pouvoir répondre instantanément aux déplacements de la tête de spectateur.
+En effet, des solutions existantes comme celle choisie par certains drones tels que celui de Parrot font le choix de ne transmettre que la région d’intérêt. Cela présente l’inconvénient de devoir attendre un aller/retour complet de transmission avant d’avoir l’image demandée. Pour un effet immersif complet, cela ne peut pas être envisagé.
+D’autres solutions font le choix de simplement transmettre l’image complète non-modifiée, assurant ainsi une image de qualité moyenne sur l’ensemble de la scène.
+
+\bigbreak
+Notre solution devra donc permettre d’avoir une qualité supérieure de la zone observée au prix d’une dégradation du reste de l’image.
+Ainsi, lorsque le spectateur bouge la tête, il voit immédiatement la partie de l’image correspondante, mais en qualité dégradée. Il faudra attendre l’aller/retour complet pour obtenir une image de bonne qualité.
+
+\bigbreak
+Pour pouvoir mesurer une amélioration de la qualité et s’adapter à diverses conditions de transmissions réseau, nous utiliserons un encodeur à débit contraint, de telle sorte que ce soit la qualité qui soit variable.
+Ce débit pourra d’ailleurs être adapté en fonction des pertes réseaux observées par le récepteur.
+
+
 \section{Recherche}
+
+Nous avons sélectionné quelques papiers qui s'intéressent à des techniques s'approchant de notre projet : la compression vidéo avec une qualité variable en fonction de la zone d'intérêt de l'utilisateur.
+
+
+
+
 
 \section{Architecture générale}
 

@@ -90,13 +90,13 @@ bloc_t* downSampleBlocs(bloc_t *blocs, int w, int h, int divider) {
 
 			bloc_t bf;
 
-			bf.y[0] = b1.y[0];
-			bf.y[1] = b1.y[0];
-			bf.y[2] = b1.y[0];
-			bf.y[3] = b1.y[0];
+			bf.y[0] = moyLuminance(&b1);
+			bf.y[1] = moyLuminance(&b2);
+			bf.y[2] = moyLuminance(&b3);
+			bf.y[3] = moyLuminance(&b4);
 
-			bf.cb = b1.cb;
-			bf.cr = b1.cr;
+			bf.cb = (b1.cb + b2.cb + b3.cb + b4.cb)/4;
+			bf.cr = (b1.cr + b2.cr + b3.cr + b4.cr)/4;
 
 
 			memcpy(ptr, &bf, sizeof(bloc_t));
