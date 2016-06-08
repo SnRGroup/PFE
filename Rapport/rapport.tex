@@ -51,8 +51,31 @@ Ce débit pourra d’ailleurs être adapté en fonction des pertes réseaux obse
 
 Nous avons sélectionné quelques papiers qui s'intéressent à des techniques s'approchant de notre projet : la compression vidéo avec une qualité variable en fonction de la zone d'intérêt de l'utilisateur.
 
+\bigbreak
+La solution la plus évidente est d'intervenir directement au niveau de l'algorithme de compression.
+L'article de Amir Said et William Pearlman\ref{REF1} décrit comment compresser une image avec un débit variable pour chaque partie de l'image.
 
+Cette approche est intéressante mais nous faisons le choix de réutiliser un algorithme de compression, dit \textit{codec}, existant.
+L'algorithme étant notamment déjà intégré dans les terminaux de réception pour effectuer du décodage matériel, il nous est presque impossible d'intervenir à ce niveau.
 
+\bigbreak
+L'article de Engin Kurutepe\ref{REF2} montre comment optimiser l'envoi d'un flux provenant de plusieurs caméras.
+Pour cela, l'équipement récepteur suit les mouvements de la tête de l'utilisateur afin de savoir quelle zone de l'image l'intéresse le plus.
+Après cela, l'équipement envoie cette information à l'encodageur qui va demander un plus gros débit aux caméras qui filment la zone d'intérêt et un débit plus faible aux autres caméras.
+
+Nous ne pouvons pas réutiliser ce concept car nous n'avons qu'une seule caméra qui filme la scène et le principe décrit par l'article est applicable seulement pour une même scène filmée avec plusieurs caméras.
+Cela nous a tout de même confortés dans l'idée d'encoder une vidéo sphérique avec une qualité dynamique, mais à l'intérieur d'une même image.
+
+\bigbreak
+Enfin, l'article de Aditya Mavlankar et Bernd Girod\ref{REF3} explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
+L’idée ressemble à ce que nous voulons faire, mais les recherches se portent sur l’optimisation de l’encodage pour du broadcast ; comment éviter d’encoder le flux de haute qualité pour chaque téléspectateur.
+Or, notre projet fonctionne dans un modèle mono-utilisateur, il sera donc plus simple et plus efficace pour notre modèle d’encoder le flux entier en prenant directement en compte la zone d'intérêt de l'utilisateur.
+Aussi, cet article cite les mécanismes FMO et ASO du standard de compression vidéo H.264 qui permettent respectivement d’avoir un débit différent pour chaque bloc de l’image et de prioriser la qualité des zones de l’image.
+Malheureusement, ces plugins ne sont pas implémentés par défaut dans des outils libres comme FFmpeg ou la libx264 et peu de récepteurs mobiles ne les comprennent.
+
+\bigbreak
+Globalement, nous n'avons pas pu trouver d'articles décrivant un procédé permettant d'implémenter directement notre projet, nous partirons donc sur l'étude et la conception d'une solution propre.
+Cette recherche nous aura tout de même permis d'avoir un bon aperçu des techniques de compression vidéo couramment utilisées.
 
 
 \section{Architecture générale}
