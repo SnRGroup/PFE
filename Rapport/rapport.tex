@@ -2,7 +2,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[francais]{babel}
-\usepackage{fullpage}
+%\usepackage{fullpage}
+\usepackage{gensymb}
 
 \begin{document}
 
@@ -70,7 +71,7 @@ Cela nous a tout de même confortés dans l'idée d'encoder une vidéo sphériqu
 Enfin, l'article de Aditya Mavlankar et Bernd Girod\ref{REF3} explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
 L’idée ressemble à ce que nous voulons faire, mais les recherches se portent sur l’optimisation de l’encodage pour du broadcast ; comment éviter d’encoder le flux de haute qualité pour chaque téléspectateur.
 Or, notre projet fonctionne dans un modèle mono-utilisateur, il sera donc plus simple et plus efficace pour notre modèle d’encoder le flux entier en prenant directement en compte la zone d'intérêt de l'utilisateur.
-Aussi, cet article cite les mécanismes FMO et ASO du standard de compression vidéo H.264 qui permettent respectivement d’avoir un débit différent pour chaque bloc de l’image et de prioriser la qualité des zones de l’image.
+Aussi, cet article cite les mécanismes FMO et ASO du standard de compression vidéo H.264 qui permettent respectivement d’avoir un débit différent pour chaque bloc de l'image et de prioriser la qualité des zones de l’image.
 Malheureusement, ces plugins ne sont pas implémentés par défaut dans des outils libres comme FFmpeg ou la libx264 et peu de récepteurs mobiles ne les comprennent.
 
 \bigbreak
@@ -81,6 +82,71 @@ Cette recherche nous aura tout de même permis d'avoir un bon aperçu des techni
 \section{Architecture générale}
 
 \section{Détails d'implémentation}
+
+\subsection{Acquisition d'image RAW}
+Pour notre projet, nous nous sommes procurés une caméra à grand angle (180\degree) pour être en mesure de filmer l'intégralité d'une scène.
+\bigbreak
+-> Photo Caméra
+\bigbreak
+La caméra est compatible avec le driver générique \textit{uvcvideo} inclus par défaut dans le noyau Linux, et peut donc être utilisée à travers \textit{Video4Linux 2}, V4L2.
+
+\bigbreak
+Afin d'obtenir l'image la moins altérée possible et de faciliter les futurs traitements sur l'image, nous récupérons les images RAW non-compressées.
+La caméra est capable, à travers l'USB2, de tenir un flux de données correspondant à des images d'une résolution de 1280x720 à une fréquence de 10 images par seconde.
+% Détail sur le débit en sortie du port USB ?
+
+\bigbreak
+L'acquisition est réalisée grâce à notre première instance de FFmpeg et à son module d'acquisition V4L2 qui permettent d'obtenir les octets correspondants sur la sortie standard pour la suite de notre traitement.
+
+\bigbreak
+La caméra utilisée présente une particularité : le capteur CMOS utilisé est un capteur standard et l'effet grand angle est obtenu par l'apposition d'une lentille convexe au-dessus.
+Si cela permet alors d'obtenir un champ de vision très proche de 180\degree, l'image en retour présente un effet \textit{fisheye} non-négligeable.
+
+\bigbreak
+-> Capture effet fisheye brut
+\bigbreak
+
+Pour rendre des proportions réalistes aux abords de l'image, il est nécessaire de procéder à une correction de la déformation induite par la lentille.
+Heureusement, FFmpeg dispose d'un certain nombre de plugins de traitement d'image que nous pouvons utiliser pendant la phase d'acquisition d'image RAW.
+
+\bigbreak
+L'un d'entre eux, issu de la collection de plugins \textit{Frei0r}, est le plugin \textit{Defish0r}, relativement simple d'utilisation et qui permet d'annuler cet effet de distorsion.
+Malheureusement, les premiers tests ont montré que le plugin était trop gourmand en calcul CPU, et qu'il était impossible de traiter 10 images par seconde : le retard s'accumule rapidement.
+
+\bigbreak
+Un autre plugin, plus générique, est présent dans FFmpeg : \textit{lenscorrection}.
+Plus léger en calcul, il est capable de traiter nos 10 images par seconde avec notre carte Raspberry Pi 3.
+Son inconvénient est son paramétrage : le filtre demande deux coefficient correspondant aux termes de second et quatrième degrés dans la formule de correction :
+
+$$r_{src} = r_{targ} * (1 + k1*(\frac{r_{targ}}{r_0})^2 + k2*(\frac{r_{targ}}{r_0})^4)$$
+avec :
+\begin{itemize}
+\item{$k1$, $k2$ : coefficients considérés}
+\item{$r_0$ : moitié de la diagonale de l'image}
+\item{$r_{src}$ : distance entre le point considéré dans l'image source et le centre de l'image}
+\item{$r_{targ}$ : distance du point à placer dans l'image de destination avec le centre de l'image}
+\end{itemize}
+
+\bigbreak
+
+La difficulté réside donc dans la détermination des coefficients $k1$ et $k2$ adaptés à notre configuration capteur+lentille.
+Les valeurs se situant dans l'intervalle $[-1;1]$, nous réalisons un test visuel en générant des images avec tous les couples de $(k1, k2)$ possibles en prenant un pas de $p=0.1$, soit une série de 441 images.
+
+\bigbreak
+-> Mosaique images ?
+
+\bigbreak
+Le détermination des coefficients s'est donc faite de façon qualitative en visionnant la série d'images et en choisissant l'image présentant le moins de déformation tout en évitant les aberrations.
+Les valeurs suivantes semblent correspondre à notre lentille :
+$$k1 = -0.4, k2 = 0.1$$
+
+\subsection{Traitement de l'image YUV}
+Si nous avons maintenant une image brute corrigée, nous souhaitons lui appliquer notre traitement spécifique.
+
+\bigbreak
+L'image RAW d'entrée est donc d'une résolution de 1280x720 avec un codage des pixels selon le format \texttt{YUV 4:2:0}.
+Ce format est très utilisé dans le codage de la vidéo car il 
+
 
 \section{Résultats}
 
