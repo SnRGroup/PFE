@@ -166,7 +166,9 @@ void *task_video(void *data) {
 		return 1;
 	}
 
-	SDL_WM_SetCaption ("YUV Window", NULL);
+	shared->sdlReady = 1;
+
+	SDL_WM_SetCaption ("SNR Player", NULL);
 
 	ps_bmp = SDL_CreateYUVOverlay (SCREEN_WIDTH, SCREEN_HEIGHT, SDL_IYUV_OVERLAY,
 	ps_screen);
@@ -203,8 +205,8 @@ void *task_video(void *data) {
 
 	while (1) {
 
-		int zoiX = 200;//shared->zoiX;
-		int zoiY = 200;//shared->zoiY;
+		int zoiX = shared->zoiX;
+		int zoiY = shared->zoiY;
 
 		n_read = 0;
 		while (n_read < imgSize) {
@@ -255,10 +257,9 @@ void *task_video(void *data) {
 		SDL_UnlockYUVOverlay (ps_bmp);
 
 		SDL_Delay (40);		
-printf("a\n");
+
 		free(blocs);
 		free(bloc);
-printf("b\n");
 	}
 
 /*
@@ -323,8 +324,58 @@ void *task_network_receiver(void *data) {
 }
 
 void *task_network_sender(void *data) {	
-	shared_t *shared = (shared_t*)data;
+    shared_t *shared = (shared_t*)data;
 
+    SDL_Event event; 
+    int continuer = 1;
+	
+    while(shared->sdlReady == 0){
+	sleep(1);
+    }
+   
+    while (continuer) 
+    {
+        SDL_WaitEvent(&event); 
+        switch(event.type)
+        {
+            case SDL_QUIT:
+                continuer = 0;
+		printf("quit\n");
+		exit(0);
+                break;
+            case SDL_KEYDOWN:
+                /* Check the SDLKey values and move change the coords */
+                switch( event.key.keysym.sym ){
+                    case SDLK_LEFT:
+			if (shared->zoiX > 0){
+				shared->zoiX += 1;
+			}
+                        break;
+                    case SDLK_RIGHT:
+			if (shared->zoiX < ZOIW){
+				shared->zoiX -= 1;
+			}
+                        break;
+                    case SDLK_UP:
+
+                        break;
+                    case SDLK_DOWN:
+
+                        break;
+                    case SDLK_z:
+			printf("z\n");
+			break;
+		    case SDLK_p:
+			printf("p\n");
+			break;
+                }
+		    char title[100];
+		    sprintf(title, "SNR Player - ROI=(%, %)", shared->zoiX, shared->zoiY);    
+		    SDL_WM_SetCaption(title, NULL);
+		    break;
+	}
+    }
+/*
 	while(1) {
 		char* str = "Test\n";  // TODO ecrire roi
 		int len = write(shared->socket,str,strlen(str));
@@ -333,6 +384,7 @@ void *task_network_sender(void *data) {
 		}
 		sleep(1);
 	}
+*/
 }
 
 
@@ -351,6 +403,7 @@ int main(int argc, char **argv) {
     char buf[BUFSIZE];
 
     shared_t *shared = calloc(sizeof(shared_t), 0);
+    shared->sdlReady = 0;
 
     /* check command line arguments */
     if (argc != 2) {
@@ -406,13 +459,13 @@ int main(int argc, char **argv) {
     pthread_t thNetworkSender;
     pthread_t thVideo;
 
+    pthread_create(&thVideo, NULL, task_video, shared);
     pthread_create(&thNetworkReceiver, NULL, task_network_receiver, shared);
     pthread_create(&thNetworkSender, NULL, task_network_sender, shared);
-    pthread_create(&thVideo, NULL, task_video, shared);
 
+    pthread_join(thVideo, NULL);
     pthread_join(thNetworkReceiver, NULL);
     pthread_join(thNetworkSender, NULL);
-    pthread_join(thVideo, NULL);
 
     return 0;
 }

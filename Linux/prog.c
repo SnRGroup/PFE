@@ -75,9 +75,6 @@ void *task_video(void *data) {
 
 		//zoiStartBloc++;
 
-		zoiX = 200;
-		zoiY = 200;
-
 		bloc_t *blocs = malloc(WIDTH/2*HEIGHT/2*sizeof(bloc_t));
 		bloc_t *blocsDown;
 

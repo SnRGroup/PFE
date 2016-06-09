@@ -26,6 +26,7 @@ typedef struct model_shared {
 	int socket;
 	char *ip;
 	int port;
+	uint8_t sdlReady;
 } shared_t;
 
 #endif
