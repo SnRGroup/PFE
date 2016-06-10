@@ -145,21 +145,58 @@ $$k1 = -0.4, k2 = 0.1$$
 \subsection{Traitement de l'image YUV}
 Si nous avons maintenant une image brute corrigée, nous souhaitons lui appliquer notre traitement spécifique.
 
-\bigbreak
+\subsubsection{Format \texttt{YUV 4:2:0}}
 L'image RAW d'entrée est donc d'une résolution de 1280x720 avec un codage des pixels selon le format \texttt{YUV 4:2:0}.
 Ce format est très utilisé dans le codage de la vidéo car il est adapté à un visionnage par un œil humain : contrairement au format RGB qui code de façon égale les composantes rouge, verte et bleue de la vidéo, le format YUV code une information de luminance et une information de chrominance.
 Dans le cas du format \texttt{YUV 4:2:0}, il y a deux fois plus d'informations de luminance que de chrominance, tout simplement car l'œil humain est plus sensible aux différences de luminosité qu'aux différences de teinte.
 
 \bigbreak
-Plus précisément, les pixels sont  
+Plus précisément, les pixels sont répartis en blocs de 4 pixels (2x2).
+Chaque bloc contient 4 informations de luminance (une valeur \texttt{Y} pour chacun des 4 pixels), mais seulement une information de chrominance commune à l'ensemble du bloc (une valeur \texttt{U} et une valeur \texttt{V}).
 
 \begin{figure}[H]
 \begin{center}
-\includegraphics[scale=0.7]{images/yuv1.svg}
+\includegraphics[scale=0.5]{images/yuv1.png}
 \end{center}
-\caption{}
+\caption{Organisation des pixels au sein d'une image \texttt{YUV 4:2:0}}
 \label{}
 \end{figure}
+
+\bigbreak
+Chaque valeur de \texttt{Y}, \texttt{U} et \texttt{V} est codée sur un octet.
+Ainsi, la taille d'une image YUV d'une résolution de \texttt{8x8} pixels (16 blocs) peut être calculée comme ceci :
+
+$$ T = 16 * (4Y + 1U + 1V) = \mathbf{96}$$
+
+D'une manière générale, la taille d'une image \texttt{YUV 4:2:0} peut donc se calculer comme étant le nombre de pixels multiplié par $\frac{3}{2}$.
+Ainsi, chacune de nos images \texttt{1280x720} a une taille d'environ 1,4 Mo.
+
+\bigbreak
+La répartition de ces informations dans la suite d'octets est un peu particulière : on trouve d'abord toutes les valeurs de Y, puis toutes les valeurs U et enfin de V.
+La lecture d'un bloc se fait donc en trois lectures consécutives.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.5]{images/yuv2.png}
+\end{center}
+\caption{Séquence d'information du format \texttt{YUV 4:2:0}}
+\label{}
+\end{figure}
+
+\bigbreak
+
+\subsubsection{Traitement spécifique}
+Puisque nous avons fait le choix de ne pas intervenir au niveau du codec lui-même, nous appliquons un traitement spécifique permettant de sous-échantillonner les zones autres que la zone d'intérêt.
+L'idée est de conserver la zone d'intérêt dans sa résolution originelle et de diviser par un facteur quatre les dimensions des autres parties de l'image, c'est-à-dire diviser la largeur et la hauteur par deux.
+
+\bigbreak
+La zone d'intérêt a une dimension fixe choisie comme une moitié de largeur et hauteur totales, soit une résolution de \texttt{640x360} ou $\frac{1}{4}$ de la surface de l'image source.
+Ainsi, dans l'idéal, notre image traîtée finale a une résolution d'une fraction de celle de l'image source :
+
+$$ R = \frac{1}{4} + \frac{3}{4}*\frac{1}{4} = \mathbf{\frac{7}{16}} $$
+
+Ce résultat est le résultat que nous pourrions obtenir en découpant de façon idéale les zones.
+Pour des raisons de complexité de calculs, nous essaierons de garder les zones entières lors de nos déplacements.
 
 
 \subsection{Android}
