@@ -4,6 +4,8 @@
 \usepackage[francais]{babel}
 %\usepackage{fullpage}
 \usepackage{gensymb}
+\usepackage{graphicx}
+\usepackage{float}
 
 \begin{document}
 
@@ -145,7 +147,20 @@ Si nous avons maintenant une image brute corrigée, nous souhaitons lui applique
 
 \bigbreak
 L'image RAW d'entrée est donc d'une résolution de 1280x720 avec un codage des pixels selon le format \texttt{YUV 4:2:0}.
-Ce format est très utilisé dans le codage de la vidéo car il 
+Ce format est très utilisé dans le codage de la vidéo car il est adapté à un visionnage par un œil humain : contrairement au format RGB qui code de façon égale les composantes rouge, verte et bleue de la vidéo, le format YUV code une information de luminance et une information de chrominance.
+Dans le cas du format \texttt{YUV 4:2:0}, il y a deux fois plus d'informations de luminance que de chrominance, tout simplement car l'œil humain est plus sensible aux différences de luminosité qu'aux différences de teinte.
+
+\bigbreak
+Plus précisément, les pixels sont  
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.7]{images/yuv1.svg}
+\end{center}
+\caption{}
+\label{}
+\end{figure}
+
 
 \subsection{Android}
 Pour la partie réception mobile, nous avons choisi d'utiliser un smartphone Android comme support de développement.
