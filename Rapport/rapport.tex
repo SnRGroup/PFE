@@ -190,6 +190,17 @@ Puis, il écoute sur un port UDP pour récuperer le flux vidéo.
 Plus précisement, les datagrammes UDP contiennent des paquets MPEG-TS qui encapsule des fragments de paquets PES (Packetized Elementary Stream) qui correspondent aux données du flux vidéo.
 Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il est transféré dans un buffer du mediaCodec afin que ce dernier décode ses données vidéos et les transmette à la surface.
 
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.5]{images/decodage_video.png}
+\end{center}
+\caption{Schéma explicatif du décodage vidéo dans l'application Android}
+\label{}
+\end{figure}
+
+\subsection{OpenGL ES}
+
+
 \section{Résultats}
 
 \section{Conclusion}
