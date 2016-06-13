@@ -324,7 +324,7 @@ En effet, le kit de développement offert par Google est gratuit, disponible sur
 De plus, depuis quelques années, Google développe un écosystème de réalité de virtuelle pour Android.
 
 \bigbreak
-Nous avons donc dévellopé une application Android en Java, qui récupère le flux video en Wi-Fi, décompresse la vidéo et l'affiche sur l'écran pour un casque de type Cardboard.
+Nous avons donc développé une application Android en Java, qui récupère le flux video en Wi-Fi, décompresse la vidéo et l'affiche sur l'écran pour un casque de type Cardboard.
 Cette application comporte une activité qui démarre la partie réception vidéo et affiche le flux vidéo. De plus, cette activité possède un menu qui permet à l'utilisateur d'activer ou non le traitement vidéo et de définir sa source vidéo (une une vidéo de test embarquée dans l'application ou le flux vidéo d'un émetteur).
 Nous avons implémenté deux modules de réception vidéo différents mais qui implémente la même interface Java afin d'être facilement interchangeable par l'activité qui les lance.
 
@@ -348,14 +348,69 @@ Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il
 
 \begin{figure}[H]
 \begin{center}
-\includegraphics[scale=0.4]{images/decodage_video.png}
+\includegraphics[scale=0.35]{images/decodage_video.png}
 \end{center}
 \caption{Schéma explicatif du décodage vidéo dans l'application Android}
 \label{}
 \end{figure}
 
 \subsection{OpenGL ES}
+Nous allons maintenant aborder la partie traitement vidéo effectuée au niveau du récepteur, c'est-à-dire translater les zones de l'image à leur place initiale et sur-échantillonner celles qui ont été sous-échantillonnées par l'émetteur.
 
+\bigbreak
+Pour rappel, ce traitement s'effectue après le décodage du flux vidéo, afin de pouvoir réutiliser un décodeur vidéo déjà existant.
+Nous avions commencé par effectuer ce traitement en Java. 
+Pour cela, nous récupérions l'image en sortie du décodeur, via un tableau de bytes, et nous parsions ses pixels et les recopions dans un autre tableau.
+Cette partie de l'algorithme prennait trop de temps à s'exécuter pour un flux continu, c'est-à-dire que ce traitement était plus long que le délai inter-image du flux vidéo.
+De plus, cette algorithme ne comportait que la partie translation et pas encore la partie sur-échantillonnage.
+
+\bigbreak
+C'est pourquoi, nous avons décidé d'effectuer ce traitement via OpenGL ES.
+En effet, OpenGL ES (Open Graphics Library for Embedded System) est une API qui permet d'effectuer des calculs d'images. 
+OpenGL ES est une simplification de OpenGL optimisée pour les appareils mobiles et est bien intégrée dans Android.
+C'est la façon la plus courante d'utiliser la puce graphique d'un appareil depuis une application Android.
+
+\bigbreak
+Pour pouvoir utiliser OpenGL ES dans notre application, nous avons intégré une surfaceTexture dans notre activité.
+Une surfaceTexture est un objet qui nous permet d'effectuer un traitement OpenGL ES sur un flux vidéo.
+Contretement, la surfaceTexture récupère un flux vidéo en entée, appelle une fonction de call-back à chaque nouvelle image, et renvoie le flux en direct à une surface.
+Une surface encapsule un tableau d'une image raw qui est envoyé au controleur vidéo du mobile afin d'être affiché l'image sur l'écran de l'appareil.
+Il nous suffit donc d'effectuer nos appels OpenGL ES dans la fonction de call-back proposée par la surfaceTexture.
+
+\bigbreak
+Comme expliqué dans la partie émetteur, le récepteur reçoit un flux vidéo traité dont les zones de l'image sont translatées et certaines sous-échantillonnées.
+De plus, le récepteur connait la position initiale du point haut gauche de la ZOI (via la connexion TCP).
+Connaissant les résolutions initiniales et finales de toutes les zonez, le récepteur peut en déduire les coordonnées des zones dans l'image reçue et dans l'image à afficher.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.35]{images/schema_traitement_video_retour.png}
+\end{center}
+\caption{Schéma explicatif du traitement vidéo effectué par OpenGL ES}
+\label{}
+\end{figure}
+
+\bigbreak
+Ce traitement est assez simple à programmer pour OpenGL ES, il suffit de connaitre les coordonnées avant et après traitement pour tous les blocs.
+De plus, si l'aire après traitement d'un bloc est plus grande que l'aire initiale, alors OpenGL ES effectuera automatiquement un sur-échantillonnage.
+La seule subtilitée à savoir est que, pour de la 2D, OpenGL ES ne sait pas utiliser des rectangles mais uniquement des triangles.
+Il faut donc utliser deux triangles par bloc afin de les traiter entierement.
+Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coordonnées EFGH, il suffit d'envoyer trois listes à OpenGL ES :
+
+\bigbreak
+\begin{itemize}
+\item{[A, B, C, D] : coordoonées de départ}
+\item{[E, F, G, H] : coordoonées d'arrivée}
+\item{[0, 1, 2, 0, 2, 3] : positions, dans les listes précédantes, des coordonnées des triangles à copier dans la surface finale (ABC => EFG et ACD => EGH)}
+\end{itemize}
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.35]{images/OpenGL_ES.png}
+\end{center}
+\caption{Example de traitement sur un bloc via OpenGL ES}
+\label{}
+\end{figure}
 
 \section{Résultats}
 
