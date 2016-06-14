@@ -10,7 +10,9 @@ prog.o: prog.c
 	gcc -std=c11 -Ofast -o prog.o -c prog.c
 
 runReceiver: receiver
-	ffmpeg -i udp://127.0.0.1:1235 -f rawvideo -pix_fmt yuv420p - 2>/dev/null | ./receiver 127.0.0.1
+	if [[ -p ffmpegcontrolfifo ]]; then rm ffmpegcontrolfifo; fi
+	mkfifo ffmpegcontrolfifo
+	ffmpeg -nostats -f mpegts -i udp://127.0.0.1:1235 -f rawvideo -vf showinfo -pix_fmt yuv420p - 2>ffmpegcontrolfifo  | ./receiver 127.0.0.1
 
 runRP: receiver	
 	ffmpeg -i udp://192.168.1.171:1235 -f rawvideo -pix_fmt yuv420p - 2>/dev/null | ./receiver 192.168.1.171
