@@ -293,6 +293,19 @@ Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coor
 \label{}
 \end{figure}
 
+\subsection{Cardboard}
+Pour terminer la partie sur le récepteur Android, nous allons maintenant aborder la partie réalité virtuelle avec le Cardboard.
+En effet, une des raisons principales qui a motivé notre choix vers Android comme base du récepteur, est le SDK Cardboard qui fonctionne lorsque le téléphone est placé dans un casque de réalité virtuelle compatible.
+Ainsi, l'application Anroid peut demander au SDK l'angle de vision de l'utilisateur à tout instant, le SDK va scinder l'écran en deux, appeler une fonction de call-back à chaque fois qu'il va dessiner l'image pour un des deux yeux, et appliquer un filtre pour corriger la distortion que rend les lentilles placées dans le casque.
+
+
+\bigbreak
+De plus, le SDK nous permet d'avoir une fonction de call-back qui sera appelée à chaque que l'image est dessinée pour un oeil.
+Dans cette fonction nous effectuons un dexuieme traitement OpenGL ES afin de déplacer l'image en fonction de l'angle de vision de l'utilisateur (récupéré via le SDK Cardboard) et nous zommons x2 dans l'image afin que l'utilisateur voit uniquement la zone correspondant à l'endroit où il regarde à un instant donné.
+Pour effectuer ce traitement, nous utilisons une matrice et les fonctions annexes que propose OpenGL ES.
+Tout d'abord nous créons une matrice identitaire, que nous translatons (via une fonction dédiée) vers le haut gauche de la zone que souhaite voir l'utilisateur, puis nous 
+
+
 \section{Résultats}
 
 \section{Conclusion}
