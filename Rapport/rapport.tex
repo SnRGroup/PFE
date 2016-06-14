@@ -6,6 +6,7 @@
 \usepackage{gensymb}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{amsmath}
 
 \begin{document}
 
@@ -198,6 +199,124 @@ $$ R = \frac{1}{4} + \frac{3}{4}*\frac{1}{4} = \mathbf{\frac{7}{16}} $$
 Ce résultat est le résultat que nous pourrions obtenir en découpant de façon idéale les zones.
 Pour des raisons de complexité de calculs, nous essaierons de garder les zones entières lors de nos déplacements.
 
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.4]{images/decoupage.png}
+\end{center}
+\caption{Découpage en zones d'une image 16:9}
+\label{}
+\end{figure}
+
+\bigbreak
+La zone d'intérêt, ou ZOI, conserve ses dimensions d'origine : \texttt{640x360}.
+Elle est placée dans la seconde moitié de l'image, laissant ainsi une autre fenêtre de \texttt{640x360} pixels libre.
+
+\bigbreak
+Pour rappel, la ZOI a une taille fixe mais sa position de départ est variable et contrôlée par le client récepteur.
+Ainsi, les autres zones autour de cette ZOI sont de taille variable, en fonction du point de départ de la ZOI qui nous définirons par le couple \texttt{(zoiX, zoiY)}.
+Les positions et dimensions des différentes sont alors définies comme cela :
+\bigbreak
+\begin{itemize}
+\item{Zone 1 : position=\texttt{(0, 0)} ; dimensions=\texttt{(zoiX, imgHeight)}}
+\item{Zone 2 : position=\texttt{(zoiX+zoiW, 0)} ; dimensions=\texttt{(imgWidth-(zoiX+zoiW), 720)}}
+\item{Zone 3 : position=\texttt{(zoiX, 0)} ; dimensions=\texttt{(zoiW, zoiY)}}
+\item{Zone 4 : position=\texttt{(zoiX, zoiY+zoiH)} ; dimensions=\texttt{(zoiW, imgHeight-(zoiY+zoiH))}}
+\end{itemize}
+
+\bigbreak
+avec :
+\begin{itemize}
+\item{\texttt{(zoiX, zoiY)} : position actuelle de la ZOI}
+\item{\texttt{(zoiW, zoiH)} : taille de la ZOI, dans notre cas \texttt{(640, 360)}}
+\item{\texttt{imgWidth, imgHeight} : dimensions de l'image d'origine, dans notre cas \texttt{(1280, 720)}}
+\end{itemize}
+
+\bigbreak
+Les quatre zones sont ensuite sous-échantillonnées : les largeurs et hauteurs sont divisées par deux, procédant ainsi à une réduction de la résolution d'un facteur 4.
+Pour cela, nous transformons chaque groupe de quatre blocs YUV en un seul bloc selon le procédé suivant :
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.5]{images/yuv3.png}
+\end{center}
+\caption{Approximation des blocs}
+\label{}
+\end{figure}
+
+\bigbreak
+
+Chaque bloc réduit est donc l'approximation des quatre blocs qu'il contient.
+Pour rappel, un bloc est composé de quatre pixels et contient une information de luminance pour chacun des pixels, mais une seule information de chrominance pour l'ensemble du bloc.
+Le bloc réduit est donc constitué d'une seule information de chrominance comme étant la moyenne des chrominances des quatre blocs d'origine ; et de quatre informations de luminance, chacune étant la moyenne des luminances de chaque blocs.
+
+\bigbreak
+Par exemple, pour le premier bloc réduit, le calcul est fait comme ceci :
+\medbreak
+$Y_{reduit}[0] = \frac{Y1 + Y2 + Y9 + Y10}{4}$
+\medbreak
+$Y_{reduit}[1] = \frac{Y3 + Y4 + Y11 + Y12}{4}$
+\medbreak
+$Y_{reduit}[2] = \frac{Y17 + Y18 + Y25 + Y26}{4}$
+\medbreak
+$Y_{reduit}[3] = \frac{Y19 + Y20 + Y27 + Y28}{4}$
+\medbreak
+$U_{reduit} = \frac{U1 + U2 + U5 + U6}{4}$
+\medbreak
+$V_{reduit} = \frac{V1 + V2 + V5 + V6}{4}$
+
+\bigbreak
+
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.5]{images/yuv4.png}
+\end{center}
+\caption{Blocs réduits}
+\label{}
+\end{figure}
+
+\bigbreak
+Après avoir appliqué cette transformation sur l'ensemble de nos quatre blocs, on obtient quatre blocs aux dimensions variables en fonction de \texttt{zoiX} et \texttt{zoiY}.
+Il y a cependant des agencements possibles de nos blocs qui donnent des dimensions constantes.
+Après avoir réduit nos zones selon le principe que l'on vient de décrire, on leur trouve les dimensions suivantes :
+
+\bigbreak
+\begin{itemize}
+\item{Zone 1 : \texttt{($\frac{\text{zoiX}}{2}$, $\frac{\text{imgHeight}}{2}$)}}
+\item{Zone 2 : \texttt{($\frac{\text{imgWidth}-(\text{zoiX}+\text{zoiW})}{2}$, $\frac{\text{imgHeight}}{2}$)}}
+\item{Zone 3 : \texttt{($\frac{\text{zoiW}}{2}$, $\frac{\text{zoiY}}{2}$)}}
+\item{Zone 4 : \texttt{($\frac{\text{zoiW}}{2}$, $\frac{\text{imgHeight}-(\text{zoiY}+\text{zoiH})}{2}$)}}
+\end{itemize}
+
+\bigbreak
+On peut tout de suite trouver un assemblage constant pour les zones 1 et 2 réduites : elles font la même hauteur et leur largeur commune ne dépend pas de la position de la ZOI : ils sont complémentaires.
+
+$$ W_1 + W_2 = \frac{zoiX}{2} + \frac{imgWidth-(zoiX+zoiW)}{2} = \frac{imgWidth - zoiW}{2}$$
+$$ = \mathbf{\frac{imgWidth}{4}} $$
+
+\bigbreak
+Les zones 1 et 2 l'une à côté de l'autre forment donc une zone de dimension constante \texttt{($\frac{imgWidth}{4}$, $\frac{imgHeight}{2}$)}.
+Le même principe s'applique aux zones 3 et 4, avec cette fois-ci une largeur constante :
+
+$$ H_3 + H_4 = \frac{zoiY}{2} + \frac{imgHeight-(zoiY+zoiH)}{2} = \frac{imgHeight - zoiH}{2} $$
+$$ = \mathbf{\frac{imgHeight}{4}} $$
+
+Les zones 3 et 4 l'une après l'autre forment donc une zone de dimension constante \texttt{($\frac{imgWidth}{4}$, $\frac{imgHeight}{4}$)}.
+Nous avons choisi d'utiliser la répartition suivante :
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.4]{images/decoupage2.png}
+\end{center}
+\caption{Organisation des zones}
+\label{}
+\end{figure}
+
+\bigbreak
+Nous obtenons ainsi une image d'une résolution de \texttt{640x720} pixels contenant notre ZOI inchangée et les autres zones sous-échantillonnées.
+L'image après notre traitement ne pèse donc plus que la moitié de sa taille d'origine, avec un petit écart par rapport aux $\frac{7}{16}$ théoriques calculés.
+Cet écart correspond à la zone verte sur notre schéma et ne véhicule aucune information vidéo.
+Nous pourrions arranger différement les blocs en les découpant davantage mais nous avons fait le choix de conserver des blocs entiers pour éviter un calcul supplémentaire côté récepteur.
 
 \subsection{Android}
 Pour la partie réception mobile, nous avons choisi d'utiliser un smartphone Android comme support de développement.
