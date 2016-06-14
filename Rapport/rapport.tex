@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{amsmath}
+\usepackage{listings}
 
 \begin{document}
 
@@ -187,6 +188,7 @@ La lecture d'un bloc se fait donc en trois lectures consécutives.
 \bigbreak
 
 \subsubsection{Traitement spécifique}
+
 Puisque nous avons fait le choix de ne pas intervenir au niveau du codec lui-même, nous appliquons un traitement spécifique permettant de sous-échantillonner les zones autres que la zone d'intérêt.
 L'idée est de conserver la zone d'intérêt dans sa résolution originelle et de diviser par un facteur quatre les dimensions des autres parties de l'image, c'est-à-dire diviser la largeur et la hauteur par deux.
 
@@ -317,6 +319,47 @@ Nous obtenons ainsi une image d'une résolution de \texttt{640x720} pixels conte
 L'image après notre traitement ne pèse donc plus que la moitié de sa taille d'origine, avec un petit écart par rapport aux $\frac{7}{16}$ théoriques calculés.
 Cet écart correspond à la zone verte sur notre schéma et ne véhicule aucune information vidéo.
 Nous pourrions arranger différement les blocs en les découpant davantage mais nous avons fait le choix de conserver des blocs entiers pour éviter un calcul supplémentaire côté récepteur.
+
+\subsection{Compression vidéo et transmission}
+Une fois notre image modifiée, l'étape suivante est de la compresser et de la transmettre au périphérique récepteur.
+
+\subsubsection{Initialisation réseau}
+Notre programme principal, que l'on nommera \textit{handler} dans la suite de ce rapport, gère le flux RAW d'entrée, la connexion avec le récepteur, et l'interaction avec notre compresseur vidéo.
+Au lancement du programme, le programme crée une socket d'écoute TCP sur le port \texttt{1234}.
+C'est sur ce port que le client récepteur doit venir initier une connexion.
+
+\bigbreak
+À la première connexion détectée et une fois le \textit{handshake} TCP effectué, notre programme connaît alors l'adresse IP du récepteur intéressé par notre flux vidéo.
+Cette socket TCP restera ouverte entre l'émetteur et le récepteur pour la signalisation par la suite.
+
+\subsubsection{Envoi des images vidéo}
+Notre programme se met à lire son entrée standard sur laquelle sont envoyées les images RAW de la caméra (par la première instance FFmpeg) puis lui applique notre traitement spécifique.
+Il lance ensuite une seconde instance de FFmpeg, configurée cette fois-ci en tant qu'encodeur vidéo.
+L'instance prend en entrée nos images RAW traitées d'une résolution de \texttt{640x720} et les encode en utilisant le codec H.264.
+Quelques options spécifiques à nos besoins ont été ajoutées :
+
+\paragraph{\texttt{-preset ultrafast}} est d'un ensemble d'option prédéfinies configurant le codec H.264 pour faire une compression légère.
+En effet, puisque nous lisons les images à un rythme de 10 par seconde, la compression de chaque image doit se faire suffisamment rapidement, c'est-à-dire ne pas excéder 100 ms.
+
+\paragraph{\texttt{-tune zerolatency}} permet à H.264 de ne pas utiliser d'images B dans ses \textit{Group of Pictures}.
+Les images B sont des images différentielles qui tiennent compte à la fois des images passées et des images futures.
+Si cela est intéressant pour abaisser le débit du flux vidéo compressé, il faut pour cela que le codec mette en mémoire tampon suffisamment d'images pour pouvoir tenir compte des images futures.
+Or, nous souhaitons obtenir la latence la plus faible possible, d'où la désactivation de ces images B.
+
+\paragraph{\texttt{-g 10}} définit le nombre d'images dans chaque \textit{Group of Pictures}.
+Chacun de ces GoP contient donc une image clé et des images différentielles à la suite.
+Une valeur de 10 assure donc la présence d'une image clé toutes les 10 images.
+Si ce choix est aussi néfaste pour le débit du flux vidéo, il permet d'éviter une accumulation d'erreur trop importante à la réception.
+En effet, en cas de paquets perdus, une image différentielle peut être manquée et un artefact vidéo apparaît alors à la réception.
+La valeur de 10 nous assure que l'artefact sera gommé dans le pire des cas dans l'une des 9 images à suivre.
+
+\paragraph{\texttt{-b:v 1500k}} définit le débit constant à utiliser par le codec H.264.
+Ce débit dépend de la qualité que l'on souhaite atteindre et des conditions réseau dans lesquelles nous travaillons.
+
+\bigbreak
+FFmpeg est ensuite paramétré pour envoyer les flux vidéo H.264 dans des paquets MPEG-TS encapsulés dans des paquets UDP.
+Ces paquets sont à destination du port \texttt{1235} du client récepteur.
+Afin de respecter la spécification MPEG-TS, les paquets UDP ont un \textit{payload} de 188 octets, inférieur à la majorité des MTU, pouvant ainsi être utilisé sur tout type de réseau.
 
 \subsection{Android}
 Pour la partie réception mobile, nous avons choisi d'utiliser un smartphone Android comme support de développement.
