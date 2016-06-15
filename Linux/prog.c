@@ -16,8 +16,6 @@
 #include "types.h"
 #include "video.h"
 
-static int zoiStartBloc;
-
 int pipeToF[2];
 int pipeFromF[2];
 
@@ -26,22 +24,15 @@ int offsetY = WIDTH*HEIGHT;
 
 unsigned char buffer[WIDTH*HEIGHT*3/2];
 unsigned char buffer2[WIDTH*HEIGHT*3/2/2];
-int n_read = 0 ;
-int n = 0;
-
-unsigned char globPkt[300];
-
-pthread_mutex_t mutex;
-pthread_mutex_t mutexCb;
-pthread_cond_t cond;
-
-
 
 void *task_video(void *data) {
 
 	shared_t *shared = (shared_t*)data;
-
 	printf("Thread A\n");
+
+	int n=0;
+	int n_read=0;
+
 	while (1) {
 
 		int zoiX = shared->zoiX;
@@ -55,25 +46,7 @@ void *task_video(void *data) {
 		}
 
 
-		//pthread_mutex_lock(&mutexRaw);
-		//pthread_cond_wait(&condRaw, &mutexRaw);
-
 		bloc_t *bloc = malloc(sizeof(bloc_t));
-
-		/*
-			 for (int i = 0; i<230400; i++) {	
-			 readBloc(buffer, bloc, i);
-			 char tmp[4];
-			 tmp[0] = bloc->y[3];
-			 tmp[1] = bloc->y[2];
-			 tmp[2] = bloc->y[1];
-			 tmp[3] = bloc->y[0];
-			 memcpy(&(bloc->y), &tmp, 4);
-			 writeBloc(buffer2, bloc, 230400-1-i);
-			 }
-			 */
-
-		//zoiStartBloc++;
 
 		bloc_t *blocs = malloc(WIDTH/2*HEIGHT/2*sizeof(bloc_t));
 		bloc_t *blocsDown;
@@ -106,19 +79,9 @@ void *task_video(void *data) {
 		writeBlocs(buffer2, WIDTH/2, blocsDown, WIDTH/4, zoiY/2, ZOIW/2, (HEIGHT-(zoiY+ZOIH))/2);
 		free(blocsDown);
 
-		//writeBlocs(buffer2, blocs, 0, 360, ZOIW, ZOIH);
-		//writeBlocs(buffer2, blocs, 640, 0, ZOIW, ZOIH);
 
-		//writeBlocs(buffer2, nb, 640, 360, ZOIW/2, ZOIH/2);
-
-		//write(1, buffer2, imgSize/2);
-
-
-
-		printf("IMG %d\n", ++shared->imgCount);
+		printf("FRAME=%d\n", ++shared->imgCount);
 		write(pipeToF[1], buffer2, imgSize/2);
-		//printf("IMG2\n");
-		//fwrite(buffer2, 1, imgSize/2, ffmpeg);
 
 		free(blocs);
 		free(bloc);
@@ -142,16 +105,14 @@ void *task_network1(void *data) {
 			exit(0);
 		}
 		buf[len] = 0;
-		printf("%s\n",buf);
 		int a;
 		int b;
 		sscanf(buf,"%d,%d\n",&a, &b);
-		printf("a=%d\n",a);
-		printf("b=%d\n",b);
 		shared->zoiX=a;
 		shared->zoiY=b;
 		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount, shared->zoiX, shared->zoiY);
-		write(shared->socket, buf, strlen(buf)); 
+		write(shared->socket, buf, strlen(buf));
+		printf("Next ZOI position : %d,%d\n",a,b);
 	}
 
 }
@@ -166,134 +127,11 @@ void *task_network2(void *data) {
 	}
 }
 
-/*
-void *task_b(void *data) {
-
-	shared_t *shared = (shared_t*)data;
-	printf("Thread B\n");
-	//return;
-	//
-	//
-
-	//FILE *file = fopen("test.ts","w");
-
-	//unsigned char pkt[300];
-
-
-	while (1) {
-		int n = 0;
-		int n_tot = 0;
-
-		pkt_t pkt;
-
-		while (n_tot < 188) {
-			while((n = read(pipeFromF[0], &(pkt.data[n_tot]), 188 - n_tot)) > 0) {
-				n_tot+=n;
-			}
-			//printf("W\n");
-		}
-
-		//printf("W\n");
-		//pthread_mutex_lock(&mutex);
-		//
-
-		
-		cb_push(&shared->pktList, &pkt);
-		sem_post(&(shared->semaphore));
-		//printf("Cnt=%d\n",shared->pktList.count);
-		//sleep(0.1);
-
-		//memcpy(globPkt, pkt, 188);
-
-		//fwrite(pkt, 1, 188, file);
-
-		//n_tot = read(pipeFromF[0], pkt, 188);
-		//write(1, pkt, n);
-		//printf("Sending %d\n",n_tot);
-		//printf("S\n");
-
-		//pthread_cond_signal(&cond);
-
-		//pthread_mutex_unlock(&mutex);
-	}
-}
-*/
-
-/*
-void *task_ca(void *data) {
-
-	shared_t *shared = (shared_t*)data;
-	printf("TASK C\n");
-
-	int clientSocket, portNum, nBytes;
-	struct sockaddr_in serverAddr;
-	socklen_t addr_size;
-	clientSocket = socket(PF_INET, SOCK_DGRAM, 0);
-	int tmp=0;
-	//int aa = setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, &tmp, sizeof(tmp));
-	//printf("SOCK=%d\n",aa);
-	
-int 	fl = fcntl(clientSocket, F_GETFL);
-	fcntl(clientSocket, F_SETFL, fl | O_NONBLOCK);
-
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(1235);
-	serverAddr.sin_addr.s_addr = inet_addr("192.168.1.124");
-	memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
-
-	addr_size = sizeof serverAddr;
-
-
-	FILE *file = fopen("test.ts","w");
-
-	while(1) {
-		//pthread_mutex_lock(&mutex);
-		//pthread_cond_wait(&cond, &mutex);
-
-		pkt_t pkt;
-		//printf("count=%d\n",shared->pktList.count);
-		
-		int ret = sem_wait(&(shared->semaphore));
-
-		if (ret != 0) {
-			printf("sem error\n");
-		}
-
-		//if (!cb_empty(&shared->pktList)) {
-			//printf("Poping\n");
-			cb_pop(&shared->pktList, &pkt);
-
-
-			//printf("Sending\n");
-			sendto(clientSocket,pkt.data,188,0,(struct sockaddr *)&serverAddr,addr_size);
-			fwrite(pkt.data, 1, 188, file);
-
-		//} else {
-			//printf("Nothing\n");
-			//sleep(1);
-		//}
-		//pthread_mutex_unlock(&mutex);
-
-	}
-
-
-}
-*/
-
-/*
-void *task_d(void *p_data) {
-	printf("Thread D\n");
-}
-*/
 
 int main() {
 
 	shared_t *shared = malloc(sizeof(shared_t));
 	shared->imgCount=0;
-
-	//sem_init(&(shared->semaphore), 0, 0);
-
-	//cb_init(&shared->pktList, 10000, sizeof(pkt_t));
 
 	int servSocket;
 	struct sockaddr_in serv_addr, client_addr;
@@ -317,12 +155,12 @@ int main() {
 	printf("Waiting for connection...\n");
 
 	shared->socket = accept(servSocket, (struct sockaddr*)&client_addr, &client_addr_length);
-	printf("Connect!\n");
+	printf("Connected!\n");
 
 	shared->ip = inet_ntoa(client_addr.sin_addr);
 	shared->port = ntohs(client_addr.sin_port);
 
-	printf("%s:%d\n",shared->ip,shared->port);
+	printf("Client = %s:%d\n",shared->ip,shared->port);
 
 	write(shared->socket, "Hello\n", 7);	
 
@@ -338,37 +176,26 @@ int main() {
 		close(pipeToF[1]);
 		close(pipeFromF[0]);
 
-		//printf("Fils\n");
 		dup2(pipeToF[0], STDIN_FILENO);
 		dup2(pipeFromF[1], STDOUT_FILENO);
 		//dup2(pipeFromF[1], STDERR_FILENO);
-
-		//printf("Launching FFmpeg...\n");
-		//
-		//
 
 		char destination[100];
 
 		sprintf(destination,"udp://%s:%d?pkt_size=188",shared->ip,UDP_PORT);
 
-		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", "1000k", 
+		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-v", "0", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", "2000k", 
 				"-bsf:v", "h264_mp4toannexb",
 				"-pix_fmt", "yuv420p", "-preset", "ultrafast", "-bufsize", "0", "-g", "10", "-tune", "zerolatency", "-fflags", "nobuffer", "-bufsize", "0", "-f", "mpegts",
 				//"roffi.mp4");	
-				destination, NULL);
-			//"-", NULL);
-
-		printf("End of child\n");
+			destination, NULL);
+		//"-", NULL);
 
 		exit(1);
 	}
 
 	close(pipeToF[0]);
 	close(pipeFromF[1]);
-
-	printf("Ready.\n");
-
-	//sleep(1);
 
 	pthread_t thVideo;
 	pthread_t thNetwork1;
@@ -380,26 +207,11 @@ int main() {
 	pthread_create(&thVideo, NULL, task_video, shared);
 	pthread_create(&thNetwork1, NULL, task_network1, shared);
 	pthread_create(&thNetwork2, NULL, task_network2, shared);
-	//pthread_create(&tca, NULL, task_ca, shared);
-	//pthread_create(&td, NULL, task_d, shared);
-
-	unsigned char tmpBuf[imgSize];
-	/*while (1) {
-		printf("Got whole buffer\n");
-		pthread_mutex_lock(&mutexRaw);
-		printf("Copying...\n");
-		memcpy(buffer, tmpBuf, imgSize);
-		printf("Done.\n");
-		pthread_cond_signal(&condRaw);
-		pthread_mutex_unlock(&mutexRaw);
-		}*/
-
 
 
 	pthread_join(thVideo, NULL);
 	pthread_join(thNetwork1, NULL);
 	pthread_join(thNetwork2, NULL);
-//	pthread_join(tca, NULL);
 
 }
 
