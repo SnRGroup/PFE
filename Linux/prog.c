@@ -161,7 +161,7 @@ void *task_network2(void *data) {
 
 	while(1) {
 		char* str = "Test\n";
-		write(shared->socket,str,strlen(str));
+		//write(shared->socket,str,strlen(str));
 		sleep(1);
 	}
 }

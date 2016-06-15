@@ -15,7 +15,7 @@ runReceiver: receiver
 	ffmpeg -nostats -f mpegts -i udp://127.0.0.1:1235 -f rawvideo -vf showinfo -pix_fmt yuv420p - 2>ffmpegcontrolfifo  | ./receiver 127.0.0.1
 
 runRP: receiver	
-	ffmpeg -i udp://192.168.1.171:1235 -f rawvideo -pix_fmt yuv420p - 2>/dev/null | ./receiver 192.168.1.171
+	ffmpeg -nostats -f mpegts -s 640x720 -r 10 -tune zerolatency -buffer 1024 -i udp://192.168.1.171:1235 -f rawvideo -vf showinfo -pix_fmt yuv420p - 2>ffmpegcontrolfifo | ./receiver 192.168.1.171
 
 receiver: receiver.o video.o
 	gcc -o receiver receiver.o video.o -lm -lpthread -lSDLmain -lSDL
