@@ -283,7 +283,7 @@ void *task_network_sender(void *data) {
 				/* Check the SDLKey values and move change the coords */
 				switch( event.key.keysym.sym ){
 					case SDLK_LEFT:
-						if (wantedZoiX >= 20){
+						if (wantedZoiX >= 20+2){
 							wantedZoiX -= 20;
 						}
 						break;
@@ -293,7 +293,7 @@ void *task_network_sender(void *data) {
 						}
 						break;
 					case SDLK_UP:
-						if (wantedZoiY >= 20) {
+						if (wantedZoiY >= 20+2) {
 							wantedZoiY -= 20;
 						}
 						break;
