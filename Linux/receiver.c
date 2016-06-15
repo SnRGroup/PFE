@@ -49,7 +49,8 @@ unsigned char buffer2[WIDTH*HEIGHT*3/2];
 int imgSize = WIDTH_2*HEIGHT_2*3/2;
 int offsetY = WIDTH*HEIGHT;
 unsigned char buffer[WIDTH_2*HEIGHT_2*3/2];
-unsigned char buffer2[WIDTH*HEIGHT*3/2];
+#define BUFFER2_SIZE WIDTH*HEIGHT*3/2
+unsigned char buffer2[BUFFER2_SIZE];
 
 int n_read = 0 ;
 int n = 0;
@@ -64,86 +65,6 @@ pthread_cond_t cond;
 
 void *task_video(void *data) {
 	shared_t *shared = (shared_t*)data;
-/*
-	SDL_Surface * ps_screen;
-	SDL_Overlay * ps_bmp;
-	SDL_Rect s_rect;
-
-	char * pv_frame = NULL;
-	int v_pic_size = 0, v_frame_size = 0;
-	S_picture s_yuv_pic;
-
-	if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
-	{
-		fprintf (stderr, "Could not initialize SDL -% s \n", SDL_GetError ());
-		return 1;
-	}
-
-	ps_screen = SDL_SetVideoMode (SCREEN_WIDTH, SCREEN_HEIGHT, 0, SDL_SWSURFACE);
-	if (! ps_screen)
-	{
-		fprintf (stderr, "SDL: could not set video mode-exiting \n");
-		return 1;
-	}
-
-	SDL_WM_SetCaption ("YUV Window", NULL);
-
-	ps_bmp = SDL_CreateYUVOverlay (SCREEN_WIDTH, SCREEN_HEIGHT, SDL_IYUV_OVERLAY,
-	ps_screen);
-
-	v_frame_size = (SCREEN_WIDTH * SCREEN_HEIGHT);
-	v_pic_size = ((v_frame_size * 3) / 2);
-	if ((pv_frame = (char *) calloc (v_pic_size, 1)) == NULL)
-	{
-		fprintf (stderr, "SYS: could not allocate mem space \n");
-		return 1;
-	}
-
-	s_yuv_pic.pv_data [0] = buffer;
-	s_yuv_pic.pv_data [2] = (char *) (buffer + v_frame_size);
-	s_yuv_pic.pv_data [1] = (char *) (buffer + v_frame_size + v_frame_size / 4);
-	s_yuv_pic.v_linesize [0] = SCREEN_WIDTH;
-	s_yuv_pic.v_linesize [1] = (SCREEN_WIDTH / 2);
-	s_yuv_pic.v_linesize [2] = (SCREEN_WIDTH / 2);
-
-	ps_bmp-> pixels [0] = (unsigned char *) (s_yuv_pic.pv_data [0]);
-	ps_bmp-> pixels [2] = (unsigned char *) (s_yuv_pic.pv_data [1]);
-	ps_bmp-> pixels [1] = (unsigned char *) (s_yuv_pic.pv_data [2]);
-
-	ps_bmp-> pitches [0] = s_yuv_pic.v_linesize [0];
-	ps_bmp-> pitches [2] = s_yuv_pic.v_linesize [1];
-	ps_bmp-> pitches [1] = s_yuv_pic.v_linesize [2];
-
-	s_rect.x = 0;
-	s_rect.y = 0;
-	s_rect.w = SCREEN_WIDTH +8;
-	s_rect.h = SCREEN_HEIGHT +8;
-
-	int i = 0, ret = 0;
-
-	while (1) {
-
-		int zoiX = shared->zoiX;
-		int zoiY = shared->zoiY;
-
-		n_read = 0;
-		while (n_read < imgSize) {
-			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
-				n_read += n;
-			}
-		}
-
-		i++;
-
-		SDL_LockYUVOverlay (ps_bmp);
-
-		SDL_DisplayYUVOverlay (ps_bmp, & s_rect);
-
-		SDL_UnlockYUVOverlay (ps_bmp);
-
-		SDL_Delay (40);
-	}
-*/
 
 	SDL_Surface * ps_screen;
 	SDL_Overlay * ps_bmp;
@@ -166,9 +87,9 @@ void *task_video(void *data) {
 		return 1;
 	}
 
-	shared->sdlReady = 1;
-
-	SDL_WM_SetCaption ("SNR Player", NULL);
+	shared->sdlReady = true;
+   
+	SDL_WM_SetCaption("SNR Player", NULL);
 
 	ps_bmp = SDL_CreateYUVOverlay (SCREEN_WIDTH, SCREEN_HEIGHT, SDL_IYUV_OVERLAY,
 	ps_screen);
@@ -198,16 +119,12 @@ void *task_video(void *data) {
 
 	s_rect.x = 0;
 	s_rect.y = 0;
-	s_rect.w = SCREEN_WIDTH +8;
-	s_rect.h = SCREEN_HEIGHT +8;
+	s_rect.w = SCREEN_WIDTH + 8;
+	s_rect.h = SCREEN_HEIGHT + 8;
 
-	int i = 0, ret = 0;
+	int i = 0;
 
 	while (1) {
-
-		int zoiX = shared->zoiX;
-		int zoiY = shared->zoiY;
-
 		n_read = 0;
 		while (n_read < imgSize) {
 			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
@@ -217,38 +134,69 @@ void *task_video(void *data) {
 
 		i++;
 
-		bloc_t *bloc = malloc(sizeof(bloc_t));
-		bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
-		bloc_t *blocsUp = NULL;
 
-		// ZOI	
-		readBlocs(buffer, WIDTH/2, blocs, 0, HEIGHT-ZOIH, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, zoiX, zoiY, ZOIW, ZOIH);
+		if (! shared->processing) {
+			// clear buffer
+			memset(buffer2, 0, sizeof(unsigned char) * BUFFER2_SIZE);
 
-		// LEFT SIDE
-		readBlocs(buffer, WIDTH/2, blocs, 0, 0, zoiX/2, ZOIH);
-		blocsUp = upSampleBlocs(blocs, zoiX/2, ZOIH, 2);		
-		writeBlocs(buffer2, WIDTH, blocsUp, 0, 0, zoiX, HEIGHT);
-		free(blocsUp);
+			// process
+			bloc_t *bloc = malloc(sizeof(bloc_t));
+			bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
+			bloc_t *blocsUp = NULL;
 
-		// RIGHT SIDE
-		readBlocs(buffer, WIDTH/2, blocs, zoiX/2, 0, (ZOIW-zoiX)/2, ZOIH);
-		blocsUp = upSampleBlocs(blocs, (ZOIW-zoiX)/2, ZOIH, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX+ZOIW, 0, ZOIW-zoiX, HEIGHT);
-		free(blocsUp);
+			readBlocs(buffer, WIDTH/2, blocs, 0, 0, ZOIW, HEIGHT);
+			writeBlocs(buffer2, WIDTH, blocs, 0, 0, ZOIW, HEIGHT);
+	
+			free(blocs);
+			free(bloc);
+		}
+		else {
+			// get ZOI
+			int zoiX = 200;//shared->zoiX;
+			int zoiY = 200;//shared->zoiY;
 
-		// TOP BLOCK
-		readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, 0, ZOIW/2, zoiY/2);
-		blocsUp = upSampleBlocs(blocs, ZOIW/2, zoiY/2, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX, 0, ZOIW, zoiY);
-		free(blocsUp);
+			// process
+			bloc_t *bloc = malloc(sizeof(bloc_t));
+			bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
+			bloc_t *blocsUp = NULL;
 
-		// BOTTOM BLOCK
-		readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, zoiY/2, ZOIW/2, (ZOIH-zoiY)/2);
-		blocsUp = upSampleBlocs(blocs, ZOIW/2, (ZOIH-zoiY)/2, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX, zoiY+ZOIH, ZOIW, ZOIH-zoiY);
-		free(blocsUp);
+			// ZOI	
+			readBlocs(buffer, WIDTH/2, blocs, 0, ZOIH, ZOIW, ZOIH);
+			writeBlocs(buffer2, WIDTH, blocs, zoiX, zoiY, ZOIW, ZOIH);
 
+			// LEFT SIDE
+			readBlocs(buffer, WIDTH/2, blocs, 0, 0, zoiX/2, ZOIH);
+			blocsUp = upSampleBlocs(blocs, zoiX/2, ZOIH, 2);		
+			writeBlocs(buffer2, WIDTH, blocsUp, 0, 0, zoiX, HEIGHT);
+			free(blocsUp);
+
+			// RIGHT SIDE
+			readBlocs(buffer, WIDTH/2, blocs, zoiX/2, 0, (ZOIW-zoiX)/2, ZOIH);
+			blocsUp = upSampleBlocs(blocs, (ZOIW-zoiX)/2, ZOIH, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX+ZOIW, 0, ZOIW-zoiX, HEIGHT);
+			free(blocsUp);
+
+			// TOP BLOCK
+			readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, 0, ZOIW/2, zoiY/2);
+			blocsUp = upSampleBlocs(blocs, ZOIW/2, zoiY/2, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX, 0, ZOIW, zoiY);
+			free(blocsUp);
+
+			// BOTTOM BLOC
+			readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, zoiY/2, ZOIW/2, (ZOIH-zoiY)/2);
+			blocsUp = upSampleBlocs(blocs, ZOIW/2, (ZOIH-zoiY)/2, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX, zoiY+ZOIH, ZOIW, ZOIH-zoiY);
+			free(blocsUp);
+				
+			drawBlackLineY(buffer2, WIDTH, zoiX, zoiY - 2, ZOIH);
+			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY - 2, ZOIW);
+			drawBlackLineY(buffer2, WIDTH, zoiX + ZOIW, zoiY - 2, ZOIH);
+			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY + ZOIH - 2, ZOIW);
+
+			free(blocs);
+			free(bloc);
+	
+		}
 
 		SDL_LockYUVOverlay (ps_bmp);
 
@@ -256,45 +204,8 @@ void *task_video(void *data) {
 
 		SDL_UnlockYUVOverlay (ps_bmp);
 
-		SDL_Delay (40);		
-
-		free(blocs);
-		free(bloc);
+		SDL_Delay (40);	
 	}
-
-/*
-	int i = 0, ret = 0;
-	while (1) {
-
-		int zoiX = shared->zoiX;
-		int zoiY = shared->zoiY;
-
-		n_read = 0;
-		while (n_read < imgSize) {
-			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
-				n_read += n;
-			}
-		}
-
-		bloc_t *bloc = malloc(sizeof(bloc_t));
-		bloc_t *blocs = malloc(WIDTH/2*HEIGHT/2*sizeof(bloc_t));
-		bloc_t *blocsUp;
-
-		// ZOI	
-		readBlocs(buffer, blocs, 0, HEIGHT-ZOIH, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, 0, 0, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, 0, ZOIH, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, ZOIW, 0, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, ZOIW, ZOIH, ZOIW, ZOIH);
-
-		i++;
-		printf("IMG %d\n", ++shared->imgCount);
-		write(pipeToF[1], buffer2, imgSize);
-
-		free(blocs);
-		free(bloc);
-	}
-*/
 }
 
 void *task_network_receiver(void *data) {	
@@ -329,7 +240,7 @@ void *task_network_sender(void *data) {
     SDL_Event event; 
     int continuer = 1;
 	
-    while(shared->sdlReady == 0){
+    while(! shared->sdlReady){
 	sleep(1);
     }
    
@@ -347,32 +258,36 @@ void *task_network_sender(void *data) {
                 /* Check the SDLKey values and move change the coords */
                 switch( event.key.keysym.sym ){
                     case SDLK_LEFT:
-			if (shared->zoiX > 0){
-				shared->zoiX += 1;
+			if (shared->zoiXwanted > 2){
+				shared->zoiXwanted -= 1;
 			}
                         break;
                     case SDLK_RIGHT:
-			if (shared->zoiX < ZOIW){
-				shared->zoiX -= 1;
+			if (shared->zoiXwanted < ZOIW){
+				shared->zoiXwanted += 1;
 			}
                         break;
                     case SDLK_UP:
-
+			if (shared->zoiYwanted < ZOIH){
+				shared->zoiYwanted += 1;
+			}
                         break;
                     case SDLK_DOWN:
-
+			if (shared->zoiYwanted > 2){
+				shared->zoiYwanted -= 1;
+			}
                         break;
-                    case SDLK_z:
-			printf("z\n");
-			break;
 		    case SDLK_p:
-			printf("p\n");
+			shared->processing = ! shared->processing;
 			break;
                 }
-		    char title[100];
-		    sprintf(title, "SNR Player - ROI=(%, %)", shared->zoiX, shared->zoiY);    
-		    SDL_WM_SetCaption(title, NULL);
-		    break;
+/*
+		char title[100];
+		sprintf(title, "SNR Player - info=%s - processing=%s", 
+			shared->info ? "true":"false", shared->processing ? "true":"false");    
+		SDL_WM_SetCaption(title, NULL);
+*/
+		break;
 	}
     }
 /*
@@ -403,7 +318,6 @@ int main(int argc, char **argv) {
     char buf[BUFSIZE];
 
     shared_t *shared = calloc(sizeof(shared_t), 0);
-    shared->sdlReady = 0;
 
     /* check command line arguments */
     if (argc != 2) {
@@ -426,34 +340,6 @@ int main(int argc, char **argv) {
     /* connect: create a connection with the server */
     if (connect(shared->socket, &serveraddr, sizeof(serveraddr)) < 0) 
       error("ERROR connecting");
-/*
-	pid_t pid = NULL;
-	pipe(pipeToF);
-	pipe(pipeFromF);
-	pid = fork();
-
-	if (pid == 0) {
-
-
-		close(pipeToF[1]);
-		close(pipeFromF[0]);
-
-		//printf("Fils\n");
-		dup2(pipeToF[0], STDIN_FILENO);
-		dup2(pipeFromF[1], STDOUT_FILENO);
-
-		execl("/usr/bin/ffplay", "ffplay", "-f", "rawvideo", "-pix_fmt", "yuv420p", "-s", "1280x720", "-", NULL);
-
-		printf("End of child\n");
-
-		exit(1);
-	}
-
-	close(pipeToF[0]);
-	close(pipeFromF[1]);
-
-	printf("Ready.\n");
-*/
 
     pthread_t thNetworkReceiver;
     pthread_t thNetworkSender;

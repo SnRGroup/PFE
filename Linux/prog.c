@@ -44,8 +44,8 @@ void *task_video(void *data) {
 	printf("Thread A\n");
 	while (1) {
 
-		int zoiX = shared->zoiX;
-		int zoiY = shared->zoiY;
+		int zoiX = 200;//shared->zoiX;
+		int zoiY = 200;//shared->zoiY;
 
 		n_read = 0;
 		while (n_read < imgSize) {

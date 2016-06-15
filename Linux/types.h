@@ -1,6 +1,7 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct model_bloc {
 	uint8_t y[4];
@@ -22,11 +23,14 @@ typedef struct model_circ_buffer {
 typedef struct model_shared {
 	int zoiX;
 	int zoiY;
+	int zoiYwanted;
+	int zoiXwanted;
 	int imgCount;
 	int socket;
 	char *ip;
 	int port;
-	uint8_t sdlReady;
+	bool sdlReady;
+	bool processing;
 } shared_t;
 
 #endif
