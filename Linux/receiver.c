@@ -265,8 +265,8 @@ void *task_network_sender(void *data) {
 		sleep(1);
 	}
 
-	int wantedZoiX = 0;
-	int wantedZoiY = 0;
+	int wantedZoiX = 2;
+	int wantedZoiY = 2;
 
 	while (continuer) 
 	{
