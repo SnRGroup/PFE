@@ -203,9 +203,10 @@ void *task_video(void *data) {
 			writeBlocs(buffer2, WIDTH, blocsUp, zoiX, zoiY+ZOIH, ZOIW, ZOIH-zoiY);
 			free(blocsUp);
 				
-			drawBlackLineY(buffer2, WIDTH, zoiX, zoiY - 2, ZOIH);
-			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY - 2, ZOIW);
-			drawBlackLineY(buffer2, WIDTH, zoiX + ZOIW, zoiY - 2, ZOIH);
+			int offset = zoiY < 2 ? 0 : 2;
+			drawBlackLineY(buffer2, WIDTH, zoiX, zoiY, ZOIH);
+			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY - offset, ZOIW);
+			drawBlackLineY(buffer2, WIDTH, zoiX + ZOIW, zoiY - offset, ZOIH + offset);
 			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY + ZOIH - 2, ZOIW);
 
 			free(blocs);
@@ -265,8 +266,8 @@ void *task_network_sender(void *data) {
 		sleep(1);
 	}
 
-	int wantedZoiX = 2;
-	int wantedZoiY = 2;
+	int wantedZoiX = 0;
+	int wantedZoiY = 0;
 
 	while (continuer) 
 	{
@@ -283,7 +284,7 @@ void *task_network_sender(void *data) {
 				/* Check the SDLKey values and move change the coords */
 				switch( event.key.keysym.sym ){
 					case SDLK_LEFT:
-						if (wantedZoiX >= 20+2){
+						if (wantedZoiX >= 20){
 							wantedZoiX -= 20;
 						}
 						break;
@@ -293,7 +294,7 @@ void *task_network_sender(void *data) {
 						}
 						break;
 					case SDLK_UP:
-						if (wantedZoiY >= 20+2) {
+						if (wantedZoiY >= 20) {
 							wantedZoiY -= 20;
 						}
 						break;
