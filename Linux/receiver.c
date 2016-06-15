@@ -2,22 +2,18 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
 #include <pthread.h>
 #include "SDL/SDL.h"
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "types.h"
 #include "consts.h"
 #include "video.h"
-
-/*
-const int SCREEN_WIDTH = WIDTH_2;
-const int SCREEN_HEIGHT = HEIGHT_2;
-*/
 
 const int SCREEN_WIDTH = WIDTH;
 const int SCREEN_HEIGHT = HEIGHT;
@@ -34,17 +30,8 @@ typedef struct yuv_pic
 
 
 
-static int zoiStartBloc;
-
-
 int pipeToF[2];
 int pipeFromF[2];
-/*
-int imgSize = WIDTH_2*HEIGHT_2*3/2;
-int offsetY = WIDTH_2*HEIGHT_2;
-unsigned char buffer[WIDTH_2*HEIGHT_2*3/2];
-unsigned char buffer2[WIDTH*HEIGHT*3/2];
-*/
 
 int imgSize = WIDTH_2*HEIGHT_2*3/2;
 int offsetY = WIDTH*HEIGHT;
@@ -52,18 +39,46 @@ unsigned char buffer[WIDTH_2*HEIGHT_2*3/2];
 #define BUFFER2_SIZE WIDTH*HEIGHT*3/2
 unsigned char buffer2[BUFFER2_SIZE];
 
-int n_read = 0 ;
-int n = 0;
-
-unsigned char globPkt[300];
-
 pthread_mutex_t mutex;
+
 pthread_mutex_t mutexCb;
 pthread_cond_t cond;
 
+void addFutureZoi(shared_t *shared, zoiInfo *zoi) {
+	pthread_mutex_lock(&mutex);
+	if (shared->zoiList == NULL) {
+		shared->zoiList=zoi;
+	} else {
+		zoiInfo* ptr = shared->zoiList;
+		while (ptr->next != NULL) {
+			ptr=ptr->next;
+		}
+		ptr->next=zoi;
+	}
+	pthread_mutex_unlock(&mutex);
+}
 
+void updateZoi(shared_t *shared, int frame) {
+	pthread_mutex_lock(&mutex);
+	while (shared->zoiList != NULL) {
+		if (shared->zoiList->frame <= frame) {
+			shared->zoiX = shared->zoiList->x;
+			shared->zoiY = shared->zoiList->y;
+
+			zoiInfo *toDelete = shared->zoiList;
+			shared->zoiList = shared->zoiList->next;
+			free(toDelete);
+			printf("ZOI updated !\n");
+		} else {
+			pthread_mutex_unlock(&mutex);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&mutex);
+}
 
 void *task_video(void *data) {
+
 	shared_t *shared = (shared_t*)data;
 
 	SDL_Surface * ps_screen;
@@ -77,14 +92,14 @@ void *task_video(void *data) {
 	if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
 	{
 		fprintf (stderr, "Could not initialize SDL -% s \n", SDL_GetError ());
-		return 1;
+		return NULL;
 	}
 
 	ps_screen = SDL_SetVideoMode (SCREEN_WIDTH, SCREEN_HEIGHT, 0, SDL_SWSURFACE);
 	if (! ps_screen)
 	{
 		fprintf (stderr, "SDL: could not set video mode-exiting \n");
-		return 1;
+		return NULL;
 	}
 
 	shared->sdlReady = true;
@@ -92,14 +107,14 @@ void *task_video(void *data) {
 	SDL_WM_SetCaption("SNR Player", NULL);
 
 	ps_bmp = SDL_CreateYUVOverlay (SCREEN_WIDTH, SCREEN_HEIGHT, SDL_IYUV_OVERLAY,
-	ps_screen);
+			ps_screen);
 
 	v_frame_size = (SCREEN_WIDTH * SCREEN_HEIGHT);
 	v_pic_size = ((v_frame_size * 3) / 2);
 	if ((pv_frame = (char *) calloc (v_pic_size, 1)) == NULL)
 	{
 		fprintf (stderr, "SYS: could not allocate mem space \n");
-		return 1;
+		return NULL;
 	}
 
 	s_yuv_pic.pv_data [0] = buffer2;
@@ -125,7 +140,7 @@ void *task_video(void *data) {
 	int i = 0;
 
 	while (1) {
-		n_read = 0;
+		int n_read = 0, n;
 		while (n_read < imgSize) {
 			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
 				n_read += n;
@@ -152,8 +167,8 @@ void *task_video(void *data) {
 		}
 		else {
 			// get ZOI
-			int zoiX = 200;//shared->zoiX;
-			int zoiY = 200;//shared->zoiY;
+			int zoiX = shared->zoiX;
+			int zoiY = shared->zoiY;
 
 			// process
 			bloc_t *bloc = malloc(sizeof(bloc_t));
@@ -215,143 +230,189 @@ void *task_network_receiver(void *data) {
 		char buf[101];
 		int len = read(shared->socket, buf, 100);
 		if (len == 0) {
-			error("ERROR reading socket TCP");
+			//error("ERROR reading socket TCP");
+			printf("Control socket lost! Aborting mission...\n");
+			SDL_Quit();
+			exit(1);
 		}
 		buf[len] = 0;
-		//printf("%s\n",buf);
-/*
-		int a;
-		int b;
-		sscanf(buf,"%d,%d\n",&a, &b);
-		printf("a=%d\n",a);
-		printf("b=%d\n",b);
-		shared->zoiX=a;
-		shared->zoiY=b;
-		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount, shared->zoiX, shared->zoiY);
-		write(shared->socket, buf, strlen(buf)); 
-*/
+		printf("TCPRECV=%s",buf);
+		if (strncmp(buf,"POS;",4) == 0) {
+			int frame;
+			int newX;
+			int newY;
+			sscanf(buf,"POS;%d;%d;%d\n", &frame, &newX, &newY);
+			printf("Future ZOI position : frame=%d -> %d,%d\n",frame, newX, newY);
+			zoiInfo* nZoi = (zoiInfo*)calloc(1,sizeof(zoiInfo));
+			nZoi->frame=frame;
+			nZoi->x=newX;
+			nZoi->y=newY;
+			//printf("Adding...\n");
+			addFutureZoi(shared, nZoi);
+			//printf("Added\n");
+		}
 	}
 
 }
 
 void *task_network_sender(void *data) {	
-    shared_t *shared = (shared_t*)data;
+	shared_t *shared = (shared_t*)data;
 
-    SDL_Event event; 
-    int continuer = 1;
-	
-    while(! shared->sdlReady){
-	sleep(1);
-    }
-   
-    while (continuer) 
-    {
-        SDL_WaitEvent(&event); 
-        switch(event.type)
-        {
-            case SDL_QUIT:
-                continuer = 0;
-		printf("quit\n");
-		exit(0);
-                break;
-            case SDL_KEYDOWN:
-                /* Check the SDLKey values and move change the coords */
-                switch( event.key.keysym.sym ){
-                    case SDLK_LEFT:
-			if (shared->zoiXwanted > 2){
-				shared->zoiXwanted -= 1;
-			}
-                        break;
-                    case SDLK_RIGHT:
-			if (shared->zoiXwanted < ZOIW){
-				shared->zoiXwanted += 1;
-			}
-                        break;
-                    case SDLK_UP:
-			if (shared->zoiYwanted < ZOIH){
-				shared->zoiYwanted += 1;
-			}
-                        break;
-                    case SDLK_DOWN:
-			if (shared->zoiYwanted > 2){
-				shared->zoiYwanted -= 1;
-			}
-                        break;
-		    case SDLK_p:
-			shared->processing = ! shared->processing;
-			break;
-                }
-/*
-		char title[100];
-		sprintf(title, "SNR Player - info=%s - processing=%s", 
-			shared->info ? "true":"false", shared->processing ? "true":"false");    
-		SDL_WM_SetCaption(title, NULL);
-*/
-		break;
-	}
-    }
-/*
-	while(1) {
-		char* str = "Test\n";  // TODO ecrire roi
-		int len = write(shared->socket,str,strlen(str));
-		if (len < 0) {
-			error("ERROR writing socket TCP");
-		}
+	SDL_Event event; 
+	int continuer = 1;
+
+	while(! shared->sdlReady){
 		sleep(1);
 	}
-*/
+
+	int wantedZoiX = 0;
+	int wantedZoiY = 0;
+
+	while (continuer) 
+	{
+		SDL_WaitEvent(&event); 
+		switch(event.type)
+		{
+			case SDL_QUIT:
+				continuer = 0;
+				printf("Exit\n");
+				SDL_Quit();
+				exit(0);
+				break;
+			case SDL_KEYDOWN:
+				/* Check the SDLKey values and move change the coords */
+				switch( event.key.keysym.sym ){
+					case SDLK_LEFT:
+						if (wantedZoiX >= 20){
+							wantedZoiX -= 20;
+						}
+						break;
+					case SDLK_RIGHT:
+						if (wantedZoiX <= ZOIW-20){
+							wantedZoiX += 20;
+						}
+						break;
+					case SDLK_UP:
+						if (wantedZoiY >= 20) {
+							wantedZoiY -= 20;
+						}
+						break;
+					case SDLK_DOWN:
+						if (wantedZoiY <= ZOIH-20) {
+							wantedZoiY += 20;
+						}
+						break;
+					case SDLK_p:
+						shared->processing = ! shared->processing;
+						break;
+				}
+				char txt[100];
+				sprintf(txt, "%d,%d\n", wantedZoiX, wantedZoiY);
+				write(shared->socket, txt, strlen(txt));
+				char title[100];
+				sprintf(title, "SnR Player - ZOI=(%d, %d)", wantedZoiX, wantedZoiY);    
+				SDL_WM_SetCaption(title, NULL);
+				break;
+		}
+	}
+	/*
+		 while(1) {
+		 char* str = "Test\n";  // TODO ecrire roi
+		 int len = write(shared->socket,str,strlen(str));
+		 if (len < 0) {
+		 error("ERROR writing socket TCP");
+		 }
+		 sleep(1);
+		 }
+		 */
 }
 
+
+
+void *task_ffmpeg_control(void *data) {
+	shared_t *shared = (shared_t*)data;
+	FILE* fifo = fopen("ffmpegcontrolfifo", "r");
+	char buf[500];
+	while(1) {
+		fgets(buf, 500, fifo);
+		//printf("FFMPEG=%s\n",buf);
+		char *ptsPos = strstr(buf,"pts:");
+		if (ptsPos != 0) {
+			//printf("FRAME!\n");
+			char nbrs[11];
+			int j=0;
+			for (int i=0; i<10; i++) {
+				char c = ptsPos[i+4];
+				if (c != 32) {
+					nbrs[j++] = c;
+				} else {
+					if (j > 0) {
+						break;
+					}
+				}
+			}
+			nbrs[j]=0;
+			int frame=atoi(nbrs)/9000;
+			printf("FRAME=%d\n",frame);
+			updateZoi(shared,frame);
+		}
+	}	
+}
 
 /* 
  * error - wrapper for perror
  */
 void error(char *msg) {
-    perror(msg);
-    exit(0);
+	perror(msg);
+	exit(0);
 }
 
 int main(int argc, char **argv) {
-    int sockfd, portno, n;
-    struct sockaddr_in serveraddr;
-    char *addrStr;
-    char buf[BUFSIZE];
+	int sockfd, portno, n;
+	struct sockaddr_in serveraddr;
+	char *addrStr;
+	char buf[BUFSIZE];
 
-    shared_t *shared = calloc(sizeof(shared_t), 0);
+	shared_t *shared = calloc(1, sizeof(shared_t));
+	shared->sdlReady = false;
+	shared->zoiList = NULL;
 
-    /* check command line arguments */
-    if (argc != 2) {
-       fprintf(stderr,"usage: %s <ip>\n", argv[0]);
-       exit(0);
-    }
-    addrStr = argv[1];
+	/* check command line arguments */
+	if (argc != 2) {
+		fprintf(stderr,"usage: %s <ip>\n", argv[0]);
+		exit(0);
+	}
+	addrStr = argv[1];
 
-    /* socket: create the socket */
-    shared->socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) 
-        error("ERROR opening socket");
+	/* socket: create the socket */
+	shared->socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd < 0) 
+		error("ERROR opening socket");
 
-    /* build the server's Internet address */
-    bzero((char *) &serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_addr.s_addr = inet_addr(addrStr);
-    serveraddr.sin_port = htons(TCP_PORT);
+	/* build the server's Internet address */
+	bzero((char *) &serveraddr, sizeof(serveraddr));
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_addr.s_addr = inet_addr(addrStr);
+	serveraddr.sin_port = htons(TCP_PORT);
 
-    /* connect: create a connection with the server */
-    if (connect(shared->socket, &serveraddr, sizeof(serveraddr)) < 0) 
-      error("ERROR connecting");
+	/* connect: create a connection with the server */
+	if (connect(shared->socket, &serveraddr, sizeof(serveraddr)) < 0) 
+	        error("ERROR connecting");
 
-    pthread_t thNetworkReceiver;
-    pthread_t thNetworkSender;
-    pthread_t thVideo;
+	pthread_t thNetworkReceiver;
+	pthread_t thNetworkSender;
+	pthread_t thVideo;
+	pthread_t thFFmpegControl;
 
-    pthread_create(&thVideo, NULL, task_video, shared);
-    pthread_create(&thNetworkReceiver, NULL, task_network_receiver, shared);
-    pthread_create(&thNetworkSender, NULL, task_network_sender, shared);
+	pthread_create(&thVideo, NULL, task_video, shared);
+	pthread_create(&thNetworkReceiver, NULL, task_network_receiver, shared);
+	pthread_create(&thNetworkSender, NULL, task_network_sender, shared);
+	pthread_create(&thFFmpegControl, NULL, task_ffmpeg_control, shared);
 
-    pthread_join(thVideo, NULL);
-    pthread_join(thNetworkReceiver, NULL);
-    pthread_join(thNetworkSender, NULL);
+	pthread_join(thVideo, NULL);
+	pthread_join(thNetworkReceiver, NULL);
+	pthread_join(thNetworkSender, NULL);
+	pthread_join(thFFmpegControl, NULL);
 
-    return 0;
+	return 0;
 }

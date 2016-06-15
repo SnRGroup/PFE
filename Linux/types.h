@@ -20,6 +20,13 @@ typedef struct model_circ_buffer {
 	void *tail;
 } cbuf_t;
 
+typedef struct node_zoi {
+  int frame;
+  int x;
+  int y;
+  struct node_zoi *next;
+} zoiInfo;
+
 typedef struct model_shared {
 	int zoiX;
 	int zoiY;
@@ -31,6 +38,8 @@ typedef struct model_shared {
 	int port;
 	bool sdlReady;
 	bool processing;
+	zoiInfo *zoiList;
 } shared_t;
+
 
 #endif
