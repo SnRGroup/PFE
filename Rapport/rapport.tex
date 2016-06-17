@@ -107,7 +107,13 @@ La caméra utilisée présente une particularité : le capteur CMOS utilisé est
 Si cela permet alors d'obtenir un champ de vision très proche de 180\degree, l'image en retour présente un effet \textit{fisheye} non-négligeable.
 
 \bigbreak
--> Capture effet fisheye brut
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.2]{images/fisheye.png}
+\end{center}
+\caption{Effet fisheye induit par la lentille}
+\label{}
+\end{figure}
 \bigbreak
 
 Pour rendre des proportions réalistes aux abords de l'image, il est nécessaire de procéder à une correction de la déformation induite par la lentille.
@@ -137,7 +143,15 @@ La difficulté réside donc dans la détermination des coefficients $k1$ et $k2$
 Les valeurs se situant dans l'intervalle $[-1;1]$, nous réalisons un test visuel en générant des images avec tous les couples de $(k1, k2)$ possibles en prenant un pas de $p=0.1$, soit une série de 441 images.
 
 \bigbreak
--> Mosaique images ?
+\bigbreak
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.3]{images/fisheye_tries.png}
+\end{center}
+\caption{Essais de coefficients de correction}
+\label{}
+\end{figure}
+\bigbreak
 
 \bigbreak
 Le détermination des coefficients s'est donc faite de façon qualitative en visionnant la série d'images et en choisissant l'image présentant le moins de déformation tout en évitant les aberrations.
@@ -469,6 +483,103 @@ Tout d'abord nous créons une matrice identitaire, que nous translatons (via une
 
 
 \section{Résultats}
+
+Dans cette section, nous décrirons nos techniques d'évaluation et les résultats obtenus.
+L'objectif est de comparer la qualité d'image d'une même ZOI entre une compression standard et une compression avec notre traitement spécifique.
+
+\subsection{Génération des échantillons de test}
+La première étape est de capturer un flux vidéo de quelques secondes qui servira de base à notre chaîne de traitement.
+La capture de cet échantillon se fait forcément en format RAW afin de ne pas faire intervenir de compression à cette étape.
+
+\bigbreak
+Ensuite, ce même échantillon vidéo subit deux traitements distincts.
+Le premier traitement consiste à simplement le faire passer dans un compresseur H.264 configuré pour utiliser un débit constant de 1000 kbits/s, correspondant à nos conditions de transmission en temps réel.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.25]{images/comparaison_flux1.png}
+\end{center}
+\caption{Extrait du flux vidéo normal compressé par H.264 à débit constant}
+\label{}
+\end{figure}
+
+\bigbreak
+Le second traitement consiste à faire passer l'échantillon RAW à travers notre traitement spécifique qui réduit les zones autour de la ZOI.
+Le résultat est lui aussi compressé par le codec H.264 au même débit de 1000 kbits/s.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.25]{images/comparaison_flux2.png}
+\end{center}
+\caption{Extrait du flux vidéo avec traitement spécifique compressé par H.264 à débit constant}
+\label{}
+\end{figure}
+
+
+\bigbreak
+La ZOI choisie correspond au centre de l'image, et c'est cela que nous allons chercher à comparer entre nos deux vidéos compressées.
+
+\subsection{Comparaison visuelle}
+La première comparaison que nous effectuons est visuelle : les deux ZOI sont découpées des deux vidéos à comparer, placées dans un même fichier vidéo et synchronisées en temps.
+Ainsi, le spectateur peut voir les deux résultats en même temps et facilement comparer.
+À nouveau, la vidéo générée n'est pas recompressée afin d'éviter de fausser les résultats.
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.25]{images/comparaison_mosaique.png}
+\end{center}
+\caption{Extrait du flux vidéo de comparaison des deux ZOI}
+\label{}
+\end{figure}
+
+\bigbreak
+Nous réalisons le test par des personnes extérieures au projet en leur demandant simplement laquelle des deux parties de la vidéo leur semble de meilleure qualité.
+L'arrêt sur image et le retour en arrière sont autorisés.
+Nos deux testeurs ont conclu à une meilleure qualité de la moitié de la vidéo correspondant à notre flux préalablement traité.
+
+\bigbreak
+Cela se distingue particulièrement sur les zones en mouvement et les dégradés de couleur.
+Sur les échantillons zoomés ci-après, l'effet de blocs est moins présent sur l'image de droite que sur l'image de gauche.
+
+\begin{figure}[!htb]
+\minipage{0.32\textwidth}
+  \includegraphics[width=\linewidth]{images/comparaison_zoom_normal.png}
+  \caption{Image compressée sans traitement}
+\endminipage\hfill
+\minipage{0.32\textwidth}
+  \includegraphics[width=\linewidth]{images/comparaison_zoom_raw.png}
+  \caption{Image RAW de référence\newline}
+\endminipage\hfill
+\minipage{0.32\textwidth}
+  \includegraphics[width=\linewidth]{images/comparaison_zoom_snr.png}
+  \caption{Image compressée avec traitement}
+\endminipage
+\end{figure}
+
+
+\subsection{Comparaison quantifiée}
+Afin de mesurer mathématiquement la proximité des images compressées avec l'image de référence, nous utilisons l'outil \texttt{compare} de la suite \texttt{ImageMagick}, spécialisée dans le traitement d'images.
+Sur une vidéo de 15 secondes, nous comparons chaque seconde les deux flux compressés avec le flux de référence.
+
+\bigbreak
+L'algorithme utilisé est appelé \textit{Perceptual hash} et consiste à générer une somme de contrôle pour chacune des images.
+Contrairement aux sommes de contrôle classiques, celles-ci peuvent être comparées : elles sont en effet générées à partir d'une transformée en cosinus discrète de l'image en niveau de gris, puis en gardant que les fréquences les plus importantes.
+
+\bigbreak
+Les résultats sur notre essai sont les suivants :
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.6]{images/comparaison_imagemagick.png}
+\end{center}
+\caption{Écart des deux flux avec le flux de référence}
+\label{}
+\end{figure}
+
+\bigbreak
+La période de 4 à 9 secondes correspond à celle dans laquelle il y a le plus de mouvement.
+C'est en effet sur ces transitions rapides que notre traitement spécifique prend son sens lorsque la vidéo est encodée à débit constant.
+
 
 \section{Conclusion}
 
