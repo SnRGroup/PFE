@@ -134,3 +134,17 @@ bloc_t* upSampleBlocs(bloc_t *blocs, int w, int h, int multiplier) {
 	return blocs2;
 }
 
+void drawBlackLineX(unsigned char *frame, int width, int x, int y, int len){
+	for (int i=x; i< x + len; i++) {
+		frame[(y * width) + i] = 0;
+		frame[(y * width) + i + width] = 0;
+	}
+}
+
+void drawBlackLineY(unsigned char *frame, int width, int x, int y, int len){
+	for (int j=y; j< y + len; j++) {
+		frame[(j * width) + x] = 0;
+		frame[(j * width) + x + 1] = 0;
+	}
+}
+

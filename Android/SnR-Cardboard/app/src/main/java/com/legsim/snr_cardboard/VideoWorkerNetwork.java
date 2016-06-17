@@ -41,6 +41,8 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     private MainActivity mAct;
 
+    String ip;
+
     int firstImage = -1;
     int lastImage = 0;
     double lastPTS = 0;
@@ -284,7 +286,7 @@ public class VideoWorkerNetwork implements VideoWorker {
         @Override
         public void run() {
             try {
-                clientsocketTCP = new Socket("192.168.1.171", 1234);
+                clientsocketTCP = new Socket(ip, 1234);
                 outToServer = new DataOutputStream((clientsocketTCP.getOutputStream()));
                 inFromServer = new BufferedReader(new InputStreamReader(clientsocketTCP.getInputStream()));
 

@@ -36,9 +36,13 @@ int pipeFromF[2];
 int imgSize = WIDTH_2*HEIGHT_2*3/2;
 int offsetY = WIDTH*HEIGHT;
 unsigned char buffer[WIDTH_2*HEIGHT_2*3/2];
-unsigned char buffer2[WIDTH*HEIGHT*3/2];
+#define BUFFER2_SIZE WIDTH*HEIGHT*3/2
+unsigned char buffer2[BUFFER2_SIZE];
 
 pthread_mutex_t mutex;
+
+pthread_mutex_t mutexCb;
+pthread_cond_t cond;
 
 void addFutureZoi(shared_t *shared, zoiInfo *zoi) {
 	pthread_mutex_lock(&mutex);
@@ -98,9 +102,9 @@ void *task_video(void *data) {
 		return NULL;
 	}
 
-	shared->sdlReady = 1;
-
-	SDL_WM_SetCaption ("SnR Player", NULL);
+	shared->sdlReady = true;
+   
+	SDL_WM_SetCaption("SNR Player", NULL);
 
 	ps_bmp = SDL_CreateYUVOverlay (SCREEN_WIDTH, SCREEN_HEIGHT, SDL_IYUV_OVERLAY,
 			ps_screen);
@@ -130,17 +134,13 @@ void *task_video(void *data) {
 
 	s_rect.x = 0;
 	s_rect.y = 0;
-	s_rect.w = SCREEN_WIDTH +8;
-	s_rect.h = SCREEN_HEIGHT +8;
+	s_rect.w = SCREEN_WIDTH + 8;
+	s_rect.h = SCREEN_HEIGHT + 8;
 
-	int i = 0, ret = 0, n = 0, n_read = 0;
+	int i = 0;
 
 	while (1) {
-
-		int zoiX = shared->zoiX;
-		int zoiY = shared->zoiY;
-
-		n_read = 0;
+		int n_read = 0, n;
 		while (n_read < imgSize) {
 			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
 				n_read += n;
@@ -149,38 +149,70 @@ void *task_video(void *data) {
 
 		i++;
 
-		bloc_t *bloc = malloc(sizeof(bloc_t));
-		bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
-		bloc_t *blocsUp = NULL;
 
-		// ZOI	
-		readBlocs(buffer, WIDTH/2, blocs, 0, HEIGHT-ZOIH, ZOIW, ZOIH);
-		writeBlocs(buffer2, WIDTH, blocs, zoiX, zoiY, ZOIW, ZOIH);
+		if (! shared->processing) {
+			// clear buffer
+			memset(buffer2, 0, sizeof(unsigned char) * BUFFER2_SIZE);
 
-		// LEFT SIDE
-		readBlocs(buffer, WIDTH/2, blocs, 0, 0, zoiX/2, ZOIH);
-		blocsUp = upSampleBlocs(blocs, zoiX/2, ZOIH, 2);		
-		writeBlocs(buffer2, WIDTH, blocsUp, 0, 0, zoiX, HEIGHT);
-		free(blocsUp);
+			// process
+			bloc_t *bloc = malloc(sizeof(bloc_t));
+			bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
+			bloc_t *blocsUp = NULL;
 
-		// RIGHT SIDE
-		readBlocs(buffer, WIDTH/2, blocs, zoiX/2, 0, (ZOIW-zoiX)/2, ZOIH);
-		blocsUp = upSampleBlocs(blocs, (ZOIW-zoiX)/2, ZOIH, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX+ZOIW, 0, ZOIW-zoiX, HEIGHT);
-		free(blocsUp);
+			readBlocs(buffer, WIDTH/2, blocs, 0, 0, ZOIW, HEIGHT);
+			writeBlocs(buffer2, WIDTH, blocs, 0, 0, ZOIW, HEIGHT);
+	
+			free(blocs);
+			free(bloc);
+		}
+		else {
+			// get ZOI
+			int zoiX = shared->zoiX;
+			int zoiY = shared->zoiY;
 
-		// TOP BLOCK
-		readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, 0, ZOIW/2, zoiY/2);
-		blocsUp = upSampleBlocs(blocs, ZOIW/2, zoiY/2, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX, 0, ZOIW, zoiY);
-		free(blocsUp);
+			// process
+			bloc_t *bloc = malloc(sizeof(bloc_t));
+			bloc_t *blocs = malloc(WIDTH*HEIGHT*sizeof(bloc_t));
+			bloc_t *blocsUp = NULL;
 
-		// BOTTOM BLOCK
-		readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, zoiY/2, ZOIW/2, (ZOIH-zoiY)/2);
-		blocsUp = upSampleBlocs(blocs, ZOIW/2, (ZOIH-zoiY)/2, 2);
-		writeBlocs(buffer2, WIDTH, blocsUp, zoiX, zoiY+ZOIH, ZOIW, ZOIH-zoiY);
-		free(blocsUp);
+			// ZOI	
+			readBlocs(buffer, WIDTH/2, blocs, 0, ZOIH, ZOIW, ZOIH);
+			writeBlocs(buffer2, WIDTH, blocs, zoiX, zoiY, ZOIW, ZOIH);
 
+			// LEFT SIDE
+			readBlocs(buffer, WIDTH/2, blocs, 0, 0, zoiX/2, ZOIH);
+			blocsUp = upSampleBlocs(blocs, zoiX/2, ZOIH, 2);		
+			writeBlocs(buffer2, WIDTH, blocsUp, 0, 0, zoiX, HEIGHT);
+			free(blocsUp);
+
+			// RIGHT SIDE
+			readBlocs(buffer, WIDTH/2, blocs, zoiX/2, 0, (ZOIW-zoiX)/2, ZOIH);
+			blocsUp = upSampleBlocs(blocs, (ZOIW-zoiX)/2, ZOIH, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX+ZOIW, 0, ZOIW-zoiX, HEIGHT);
+			free(blocsUp);
+
+			// TOP BLOCK
+			readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, 0, ZOIW/2, zoiY/2);
+			blocsUp = upSampleBlocs(blocs, ZOIW/2, zoiY/2, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX, 0, ZOIW, zoiY);
+			free(blocsUp);
+
+			// BOTTOM BLOC
+			readBlocs(buffer, WIDTH/2, blocs, ZOIW/2, zoiY/2, ZOIW/2, (ZOIH-zoiY)/2);
+			blocsUp = upSampleBlocs(blocs, ZOIW/2, (ZOIH-zoiY)/2, 2);
+			writeBlocs(buffer2, WIDTH, blocsUp, zoiX, zoiY+ZOIH, ZOIW, ZOIH-zoiY);
+			free(blocsUp);
+				
+			int offset = zoiY < 2 ? 0 : 2;
+			drawBlackLineY(buffer2, WIDTH, zoiX, zoiY, ZOIH);
+			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY - offset, ZOIW);
+			drawBlackLineY(buffer2, WIDTH, zoiX + ZOIW, zoiY - offset, ZOIH + offset);
+			drawBlackLineX(buffer2, WIDTH, zoiX, zoiY + ZOIH - 2, ZOIW);
+
+			free(blocs);
+			free(bloc);
+	
+		}
 
 		SDL_LockYUVOverlay (ps_bmp);
 
@@ -188,12 +220,8 @@ void *task_video(void *data) {
 
 		SDL_UnlockYUVOverlay (ps_bmp);
 
-		SDL_Delay (40);		
-
-		free(blocs);
-		free(bloc);
+		SDL_Delay (40);	
 	}
-
 }
 
 void *task_network_receiver(void *data) {	
@@ -234,7 +262,7 @@ void *task_network_sender(void *data) {
 	SDL_Event event; 
 	int continuer = 1;
 
-	while(shared->sdlReady == 0){
+	while(! shared->sdlReady){
 		sleep(1);
 	}
 
@@ -275,11 +303,8 @@ void *task_network_sender(void *data) {
 							wantedZoiY += 20;
 						}
 						break;
-					case SDLK_z:
-						printf("z\n");
-						break;
 					case SDLK_p:
-						printf("p\n");
+						shared->processing = ! shared->processing;
 						break;
 				}
 				char txt[100];
@@ -350,7 +375,7 @@ int main(int argc, char **argv) {
 	char buf[BUFSIZE];
 
 	shared_t *shared = calloc(1, sizeof(shared_t));
-	shared->sdlReady = 0;
+	shared->sdlReady = false;
 	shared->zoiList = NULL;
 
 	/* check command line arguments */
@@ -373,35 +398,7 @@ int main(int argc, char **argv) {
 
 	/* connect: create a connection with the server */
 	if (connect(shared->socket, &serveraddr, sizeof(serveraddr)) < 0) 
-		error("ERROR connecting");
-	/*
-		 pid_t pid = NULL;
-		 pipe(pipeToF);
-		 pipe(pipeFromF);
-		 pid = fork();
-
-		 if (pid == 0) {
-
-
-		 close(pipeToF[1]);
-		 close(pipeFromF[0]);
-
-	//printf("Fils\n");
-	dup2(pipeToF[0], STDIN_FILENO);
-	dup2(pipeFromF[1], STDOUT_FILENO);
-
-	execl("/usr/bin/ffplay", "ffplay", "-f", "rawvideo", "-pix_fmt", "yuv420p", "-s", "1280x720", "-", NULL);
-
-	printf("End of child\n");
-
-	exit(1);
-	}
-
-	close(pipeToF[0]);
-	close(pipeFromF[1]);
-
-	printf("Ready.\n");
-	*/
+	        error("ERROR connecting");
 
 	pthread_t thNetworkReceiver;
 	pthread_t thNetworkSender;

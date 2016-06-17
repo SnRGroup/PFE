@@ -10,5 +10,7 @@ void writeBlocs(unsigned char *dest, int width, bloc_t *blocs, int x, int y, int
 char moyLuminance(bloc_t *bloc);
 bloc_t* downSampleBlocs(bloc_t *blocs, int w, int h, int divider);
 bloc_t* upSampleBlocs(bloc_t *blocs, int w, int h, int multiplier);
+void drawBlackLineX(unsigned char *frame, int width, int x, int y, int len);
+void drawBlackLineY(unsigned char *frame, int width, int x, int y, int len);
 
 #endif

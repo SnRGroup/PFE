@@ -172,8 +172,7 @@ int main(int argc, char *argv[]) {
 
 	write(shared->socket, "Hello\n", 7);	
 
-	//zoiStartBloc = blocPos(480,270);
-	pid_t pid = NULL;
+	pid_t pid;
 	pipe(pipeToF);
 	pipe(pipeFromF);
 	pid = fork();
