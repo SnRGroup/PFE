@@ -41,7 +41,7 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     private MainActivity mAct;
 
-    String ip;
+    private String ip;
 
     int firstImage = -1;
     int lastImage = 0;
@@ -51,6 +51,9 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     public VideoWorkerNetwork(MainActivity mAct) {
         this.mAct = mAct;
+
+        ip = mAct.getIpPreference();
+
         try {
             decoder = MediaCodec.createDecoderByType("video/avc");
         } catch (Exception e) {

@@ -50,7 +50,7 @@ public class MainActivity
     final static int PROCESSING_MODE_WITH = 1;
     final static int PROCESSING_MODE_WITHOUT = 0;
 
-    final static String IP = "ip";
+    final static String IP_PREFERENCE = "IP preference";
     final static String IP_DEFAULT = "192.168.1.171";
 
     private Surface surface;
@@ -137,6 +137,7 @@ public class MainActivity
     private double ref = 0.0;
 
     int processingMode;
+    int workerMode;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -150,6 +151,7 @@ public class MainActivity
         this.mTriangleVertices.put(this.mTriangleVerticesData).position(0);
         */
         processingMode = MainActivity.getProcessingMode(getApplicationContext());
+        workerMode = MainActivity.getWorkerMode(getApplicationContext());
 
         float squareCoords[];
         short drawOrder[];
@@ -214,8 +216,14 @@ public class MainActivity
         float squareCoords[];
         float textureVertices[];
         if (processingMode == MainActivity.PROCESSING_MODE_WITH){
-            squareCoords = getSquareCoords_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
-            textureVertices = getTextureVertices_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
+            if (workerMode == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
+                squareCoords = getSquareCoords_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
+                textureVertices = getTextureVertices_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
+            }
+            else {  // video test
+                squareCoords = getSquareCoords_WITH_PROCESSING(200, 200, L, H);
+                textureVertices = getTextureVertices_WITH_PROCESSING(200, 200, L, H);
+            }
         }
         else{
             squareCoords = squareCoords_WITHOUT_PROCESSING;
@@ -445,6 +453,8 @@ public class MainActivity
         final View dialogView = inflater.inflate(R.layout.dialog_settings, null);
         alertDialog.setView(dialogView);
 
+        final EditText editIp = (EditText) dialogView.findViewById(R.id.ip);
+        editIp.setText(getIpPreference());
         final ToggleButton btnNetwork = (ToggleButton) dialogView.findViewById(R.id.btnNetwork);
         btnNetwork.setChecked(getWorkerMode(getApplicationContext()) == VIDEO_WORKER_MODE_NETWORK ?
                 true :
@@ -462,6 +472,10 @@ public class MainActivity
 
         alertDialog.setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
+                String ip = editIp.getText().toString();
+                if(! ip.isEmpty()){
+                    setIpPreference(ip);
+                }
                 setWorkerMode(btnNetwork.isChecked() ?
                         VIDEO_WORKER_MODE_NETWORK :
                         VIDEO_WORKER_MODE_LOCAL);
@@ -477,7 +491,11 @@ public class MainActivity
     }
 
     private void setIpPreference(String newIp){
-        //setSharedPreference(IP, newIp);
+        setSharedPreference(IP_PREFERENCE, newIp);
+    }
+
+    public String getIpPreference(){
+        return getSharedPreference(getApplicationContext(), MainActivity.IP_PREFERENCE, MainActivity.IP_DEFAULT);
     }
 
     private void setWorkerMode(int newMode){
@@ -502,6 +520,20 @@ public class MainActivity
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putInt(key, value);
         editor.commit();
+    }
+
+    private void setSharedPreference(String key, String value){
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
+                PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(key, value);
+        editor.commit();
+    }
+
+    private static String getSharedPreference(Context context, String key, String defValue){
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                MainActivity.PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
+        return sharedPref.getString(key, defValue);
     }
 
     private static int getSharedPreference(Context context, String key, int defValue){
