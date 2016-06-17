@@ -33,6 +33,8 @@ void *task_video(void *data) {
 	int n=0;
 	int n_read=0;
 
+	FILE *out = fopen("generated.ts","w");
+
 	while (1) {
 
 		int zoiX = shared->zoiX;
@@ -82,6 +84,7 @@ void *task_video(void *data) {
 
 		printf("FRAME=%d\n", ++shared->imgCount);
 		write(pipeToF[1], buffer2, imgSize/2);
+		fwrite(buffer2, imgSize/2, 1, out);
 
 		free(blocs);
 		free(bloc);
@@ -128,10 +131,15 @@ void *task_network2(void *data) {
 }
 
 
-int main() {
+int main(int argc, char *argv[]) {
 
 	shared_t *shared = malloc(sizeof(shared_t));
 	shared->imgCount=0;
+
+	if (argc >= 3) {
+		shared->zoiX = atoi(argv[1]);
+		shared->zoiY = atoi(argv[2]);
+	}
 
 	int servSocket;
 	struct sockaddr_in serv_addr, client_addr;

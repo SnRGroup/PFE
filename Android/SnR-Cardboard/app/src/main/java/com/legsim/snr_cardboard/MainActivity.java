@@ -50,6 +50,8 @@ public class MainActivity
     final static int PROCESSING_MODE_WITH = 1;
     final static int PROCESSING_MODE_WITHOUT = 0;
 
+    final static String IP = "ip";
+    final static String IP_DEFAULT = "192.168.1.171";
 
     private Surface surface;
 
@@ -472,6 +474,10 @@ public class MainActivity
         });
 
         alertDialog.show();
+    }
+
+    private void setIpPreference(String newIp){
+        //setSharedPreference(IP, newIp);
     }
 
     private void setWorkerMode(int newMode){
