@@ -523,9 +523,9 @@ Cette demande est faite via le canal TCP.
 Nous allons maintenant détailler l'implémentation du récepteur Linux, qui réutilise un certain nombre de solutions utilisées dans l'émetteur.
 
 \bigbreak
-Notre programme récupère en entrée un flux vidéo RAW issu de FFmpeg, ce dernier est configuré pour recevoir le flux compressé de l'émetteur (via une socket UDP sur le port 1235).
-Au lancement, le programme va initier le canal de contrôle avec l'émetteur (sur le port TCP 1234).
-C'est grâce à cette connexion que le programme demandera le déplacement de la ZOI et qu'il recevra les futurs ZOI.
+Notre programme récupère en entrée un flux vidéo RAW issu d'une instance FFmpeg configurée pour recevoir le flux compressé H.264 de l'émetteur (via une socket UDP sur le port 1235).
+Au lancement, le programme va initier le canal de contrôle avec l'émetteur (sur le port TCP 1234), comme le fait le récepteur Android.
+C'est grâce à cette connexion que le programme demandera le déplacement de la ZOI et qu'il recevra les informations de synchronisation de ZOI.
 
 \bigbreak
 La seule technologie présente dans ce récepteur et non dans l'émetteur est le SDL.
@@ -535,18 +535,27 @@ Nous l'utilisons dans le récepteur pour :
 \bigbreak
 \begin{itemize}
 \item{Afficher le flux vidéo}
-\item{Récupérer les appuies clavier}
+\item{Récupérer les entrées du clavier}
 \end{itemize}
 
 \bigbreak
 En effet, le module SDL permet de savoir sur quelles touches l'utilisateur appuie. 
-Pour déplacer la ZOI, l'utilisateur peut appuyer sur les flèches de son clavier, les nouvelles coordonnées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle.
-Enfin, en appuyant sur la touche "p", l'utilisateur peut passer du mode sans traitement au mode avec traitement.
+Pour déplacer la ZOI, l'utilisateur peut appuyer sur les flèches de son clavier, les nouvelles coordonnées désirées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle.
+L'émetteur commence alors à générer les futures images en prenant en compte cette nouvelle ZOI et renvoie aussitôt le numéro de la frame à partir de laquelle cette nouvelle ZOI est appliquée.
+Côté récepteur, il s'agit donc d'attendre l'arrivée de cette image avant de déplacer les zones selon la nouvelle position de la ZOI.
+
+La principale difficulté de cette synchronisation est le comptage des images. En effet, s'il est aisé de connaître le numéro de l'image à l'émission, le nombre d'images reçues peut être inférieur, notamment en cas de perte de paquets lors de la transmission.
+Heureusement, chaque paquet PES transmis est encodé avec le PTS, \textit{Presentation timestamp}, qui indique à quel moment afficher l'image.
+Comme nous encodons avec un taux d'image constant, on peut alors en déduire le numéro de l'image.
+Afin de récupérer cette information, nous utilisons le module \texttt{showinfo} de FFmpeg qui écrit sur la sortie standard les informations de chaque image.
+
+\bigbreak
+Enfin, en appuyant sur la touche \texttt{P}, l'utilisateur peut passer du mode sans traitement au mode avec traitement.
 
 \bigbreak
 \begin{itemize}
-\item{sans traitement : affichage du flux vidéo sans replacer les zones ni les sur-échantillonner}
-\item{avec traitement : affichage du flux vidéo en replaçant les zones et les sur-échantillonner si nécessaire}
+\item{Sans traitement : affichage du flux vidéo sans replacer les zones ni les sur-échantillonner}
+\item{Avec traitement : affichage du flux vidéo en replaçant les zones et les sur-échantillonner si nécessaire}
 \end{itemize}
 
 \bigbreak
