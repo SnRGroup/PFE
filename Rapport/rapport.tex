@@ -412,12 +412,13 @@ Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il
 \end{figure}
 
 \subsection{OpenGL ES}
-Nous allons maintenant aborder la partie traitement vidéo effectuée au niveau du récepteur, c'est-à-dire translater les zones de l'image à leur place initiale et sur-échantillonner celles qui ont été sous-échantillonnées par l'émetteur.
+Nous allons maintenant aborder la partie traitement vidéo effectuée par le récepteur.
+Ce traitement consiste à translater les zones de l'image à leur place initiale et sur-échantillonner les zones qui ont été sous-échantillonnées par l'émetteur.
 
 \bigbreak
 Pour rappel, ce traitement s'effectue après le décodage du flux vidéo, afin de pouvoir réutiliser un décodeur vidéo déjà existant.
 Nous avions commencé par effectuer ce traitement en Java. 
-Pour cela, nous récupérions l'image en sortie du décodeur, via un tableau de bytes, et nous parsions ses pixels et les recopions dans un autre tableau.
+Pour cela, nous récupérions l'image en sortie du décodeur (via un tableau de bytes), parsions ses pixels et les recopions dans un autre tableau.
 Cette partie de l'algorithme prennait trop de temps à s'exécuter pour un flux continu, c'est-à-dire que ce traitement était plus long que le délai inter-image du flux vidéo.
 De plus, cette algorithme ne comportait que la partie translation et pas encore la partie sur-échantillonnage.
 
@@ -431,13 +432,13 @@ C'est la façon la plus courante d'utiliser la puce graphique d'un appareil depu
 Pour pouvoir utiliser OpenGL ES dans notre application, nous avons intégré une surfaceTexture dans notre activité.
 Une surfaceTexture est un objet qui nous permet d'effectuer un traitement OpenGL ES sur un flux vidéo.
 Contretement, la surfaceTexture récupère un flux vidéo en entée, appelle une fonction de call-back à chaque nouvelle image, et renvoie le flux en direct à une surface.
-Une surface encapsule un tableau d'une image raw qui est envoyé au controleur vidéo du mobile afin d'être affiché l'image sur l'écran de l'appareil.
+Une surface encapsule un tableau d'une image raw qui est envoyé au controleur vidéo du mobile afin d'afficher l'image sur l'écran de l'appareil.
 Il nous suffit donc d'effectuer nos appels OpenGL ES dans la fonction de call-back proposée par la surfaceTexture.
 
 \bigbreak
 Comme expliqué dans la partie émetteur, le récepteur reçoit un flux vidéo traité dont les zones de l'image sont translatées et certaines sous-échantillonnées.
-De plus, le récepteur connait la position initiale du point haut gauche de la ZOI (via la connexion TCP).
-Connaissant les résolutions initiniales et finales de toutes les zonez, le récepteur peut en déduire les coordonnées des zones dans l'image reçue et dans l'image à afficher.
+De plus, le récepteur connait la position initiale du point haut gauche de la ZOI (via le canal de contrôle).
+Connaissant les résolutions initiniales et finales de toutes les zones, le récepteur peut en déduire les coordonnées des zones dans l'image reçue et dans l'image à afficher.
 
 \begin{figure}[H]
 \begin{center}
@@ -451,7 +452,7 @@ Connaissant les résolutions initiniales et finales de toutes les zonez, le réc
 Ce traitement est assez simple à programmer pour OpenGL ES, il suffit de connaitre les coordonnées avant et après traitement pour tous les blocs.
 De plus, si l'aire après traitement d'un bloc est plus grande que l'aire initiale, alors OpenGL ES effectuera automatiquement un sur-échantillonnage.
 La seule subtilitée à savoir est que, pour de la 2D, OpenGL ES ne sait pas utiliser des rectangles mais uniquement des triangles.
-Il faut donc utliser deux triangles par bloc afin de les traiter entierement.
+Il faut donc utliser deux triangles par bloc.
 Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coordonnées EFGH, il suffit d'envoyer trois listes à OpenGL ES :
 
 \bigbreak
@@ -465,7 +466,7 @@ Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coor
 \begin{center}
 \includegraphics[scale=0.35]{images/OpenGL_ES.png}
 \end{center}
-\caption{Example de traitement sur un bloc via OpenGL ES}
+\caption{Exemple de traitement sur un bloc via OpenGL ES}
 \label{}
 \end{figure}
 
