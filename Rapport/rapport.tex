@@ -380,28 +380,40 @@ Pour la partie réception mobile, nous avons choisi d'utiliser un smartphone And
 En effet, le kit de développement offert par Google est gratuit, disponible sur des appareils mobiles et avec une puissance assez élevée pour effectuer du traitement vidéo en direct.
 De plus, depuis quelques années, Google développe un écosystème de réalité de virtuelle pour Android.
 
-\bigbreak
+\subsubsection{Architecture de l'application}
 Nous avons donc développé une application Android en Java, qui récupère le flux video en Wi-Fi, décompresse la vidéo et l'affiche sur l'écran pour un casque de type Cardboard.
 Cette application comporte une activité qui démarre la partie réception vidéo et affiche le flux vidéo. De plus, cette activité possède un menu qui permet à l'utilisateur d'activer ou non le traitement vidéo et de définir sa source vidéo (une une vidéo de test embarquée dans l'application ou le flux vidéo d'un émetteur).
 Nous avons implémenté deux modules de réception vidéo différents mais qui implémente la même interface Java afin d'être facilement interchangeable par l'activité qui les lance.
 
-\bigbreak
-Le premier récepteur est une version simplifée qui utilise une vidéo stockée en local (dans l'application) afin de tester la partie traitement vidéo sans avoir à utiliser un émetteur.
-Techniquement, c'est un thread qui va régulierement lire le flux vidéo et l'envoyer au décodeur vidéo. 
-Pour lire le flux vidéo, nous utilisons un exctractor (class fournit par le SDK Android) qui permet de parser un fichier vidéo. Nous pouvons ensuite demander à l'extractor le type de vidéo contenue dans le fichier, puis d'écrire une partie partie du flux vidéo dans un buffer.
-Pour décoder ce flux vidéo, nous utilisons l'API MediaCodec qui permet d'accéder au support multimédia bas-niveau fournit par le SDK. Ce MediaCodec permet, entre autres, de décoder un flux vidéo.
-Pour fonctionner, nous configurons un mediaCodec avec les paramètres de la vidéo trouvés via l'extractor ainsi que la surface dans laquelle la vidéo décodée doit être envoyée (cette partie sera expliquée dans la sous-section suivante).
-Puis, grâce à notre thread, nous allons régulièrement demander au mediaCodec de nous fournir un buffer, que nous transférons à l'extractor afin qu'il y ajoute les données suivantes du flux vidéo.
-Le mediacodec recupère alors ce buffer, décode le flux vidéo qui y est présent et envoye les images décodées à la surface.
-Ce mécanisme de réutilsiation des buffers, géré par MediaCodec, permet au développeur de ne pas avoir à s'occuper de l'allocation de gros volumes de données (qui pourrait être une source de perte de performance). 
+\subsubsection{Récepteur local}
+Le premier récepteur est une version simplifée qui utilise une vidéo stockée en local (dans l'application).
+Le but de ce récepteur est de tester l'application, et notamment le traitement vidéo, sans avoir à utiliser un émetteur.
 
 \bigbreak
-La deuxième implémentation du module de réception vidéo est similaire au précedant, hormis que l'on récupère le flux vidéo sur un équipement distant.
-Ce module remplace donc l'extractor par deux sockets réseaux.
-Tout d'abord, le récepteur se connecte à l'émetteur via une socket TCP pour initier le flux de contrôle.
-Puis, il écoute sur un port UDP pour récuperer le flux vidéo.
-Plus précisement, les datagrammes UDP contiennent des paquets MPEG-TS qui encapsule des fragments de paquets PES (Packetized Elementary Stream) qui correspondent aux données du flux vidéo.
-Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il est transféré dans un buffer du mediaCodec afin que ce dernier décode ses données vidéos et les transmette à la surface.
+Techniquement, c'est un thread qui va régulierement lire le flux vidéo et l'envoyer au décodeur vidéo. 
+Pour lire le flux vidéo, nous utilisons un extracteur qui permet de parser un fichier vidéo. 
+Nous pouvons ensuite demander à l'extracteur le type de la vidéo contenue dans le fichier, puis d'écrire une partie partie du flux vidéo dans un buffer.
+
+\bigbreak
+Pour décoder ce flux vidéo, nous utilisons l'API MediaCodec qui permet d'accéder au support multimédia bas-niveau fournit par Android. Ce MediaCodec permet, entre autres, de décoder un flux vidéo.
+Pour fonctionner, nous configurons un mediaCodec avec les paramètres de la vidéo (trouvés via l'extracteur) ainsi que la surface dans laquelle la vidéo décodée doit être envoyée (cette partie sera expliquée dans la sous-section suivante).
+Grâce à notre thread, nous allons régulièrement demander à l'extracteur les données suivantes du flux vidéo, et nous transferons ces données au mediaCodec.
+Le mediaCodec décode alors cette nouvelle partie du flux vidéo et envoye les images décodées à la surface.
+
+\subsubsection{Récepteur réseau}
+La deuxième implémentation du module de réception vidéo est similaire à la précédante, hormis que l'on récupère le flux vidéo sur un équipement distant.
+Ce module remplace donc l'extrateur par deux sockets réseaux.
+
+\bigbreak
+Tout d'abord, le récepteur se connecte à l'émetteur via une socket TCP pour initier le canal de contrôle.
+C'est sur ce canal que les informations conncernant la ZOI sont échangées entre l'émetteur et le récepteur.
+
+\bigbreak
+Puis, l'application écoute sur un port UDP pour récupérer le flux vidéo envoyé par l'émetteur.
+Plus précisement, les datagrammes UDP contiennent des paquets MPEG-TS.
+Ces paquets MPEG-TS encapsulent des fragments de paquets PES (Packetized Elementary Stream) qui correspondent aux données du flux vidéo compressé.
+Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il est transféré au mediaCodec.
+Le mediaCodec décode alors la partie du flux vidéo qui est présent dans le paquet et envoye les images décodées à la surface.
 
 \begin{figure}[H]
 \begin{center}
