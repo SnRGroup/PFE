@@ -411,9 +411,9 @@ C'est sur ce canal que les informations conncernant la ZOI sont échangées entr
 \bigbreak
 Puis, l'application écoute sur un port UDP pour récupérer le flux vidéo envoyé par l'émetteur.
 Plus précisement, les datagrammes UDP contiennent des paquets MPEG-TS.
-Ces paquets MPEG-TS encapsulent des fragments de paquets PES (Packetized Elementary Stream) qui correspondent aux données du flux vidéo compressé.
+Ces paquets MPEG-TS encapsulent des fragments de paquets PES (\textit{Packetized Elementary Stream}) qui correspondent aux données du flux vidéo compressé.
 Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il est transféré au mediaCodec.
-Le mediaCodec décode alors la partie du flux vidéo qui est présent dans le paquet et envoye les images décodées à la surface.
+Le MediaCodec décode alors la partie du flux vidéo qui est présent dans le paquet et envoye les images décodées à la surface.
 
 \begin{figure}[H]
 \begin{center}
@@ -422,6 +422,7 @@ Le mediaCodec décode alors la partie du flux vidéo qui est présent dans le pa
 \caption{Schéma explicatif du décodage vidéo dans l'application Android}
 \label{}
 \end{figure}
+
 
 \subsection{OpenGL ES}
 Nous allons maintenant aborder la partie traitement vidéo effectuée par le récepteur.
@@ -497,7 +498,7 @@ La brique logicielle offerte par le SDK permet notamment de :
 \end{itemize}
 
 \bigbreak
-Afin de produire un effet immersif, nous effectuons un traitement OpenGL ES dans la fonction de call-back.
+Afin de produire un effet immersif, nous effectuons un traitement OpenGL ES dans la fonction de \textit{callback}.
 Ce traitement a pour objectifs :
 
 \bigbreak
@@ -552,16 +553,7 @@ Nous l'utilisons dans le récepteur pour :
 
 \bigbreak
 En effet, le module SDL permet de savoir sur quelles touches l'utilisateur appuie. 
-Pour déplacer la ZOI, l'utilisateur peut appuyer sur les flèches de son clavier, les nouvelles coordonnées désirées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle.
-L'émetteur commence alors à générer les futures images en prenant en compte cette nouvelle ZOI et renvoie aussitôt le numéro de la frame à partir de laquelle cette nouvelle ZOI est appliquée.
-Côté récepteur, il s'agit donc d'attendre l'arrivée de cette image avant de déplacer les zones selon la nouvelle position de la ZOI.
-
-La principale difficulté de cette synchronisation est le comptage des images. En effet, s'il est aisé de connaître le numéro de l'image à l'émission, le nombre d'images reçues peut être inférieur, notamment en cas de perte de paquets lors de la transmission.
-Heureusement, chaque paquet PES transmis est encodé avec le PTS, \textit{Presentation timestamp}, qui indique à quel moment afficher l'image.
-Comme nous encodons avec un taux d'image constant, on peut alors en déduire le numéro de l'image.
-Afin de récupérer cette information, nous utilisons le module \texttt{showinfo} de FFmpeg qui écrit sur la sortie standard les informations de chaque image.
-
-\bigbreak
+Pour déplacer la ZOI, l'utilisateur peut appuyer sur les flèches de son clavier.
 Enfin, en appuyant sur la touche \texttt{P}, l'utilisateur peut passer du mode sans traitement au mode avec traitement.
 
 \bigbreak
@@ -572,13 +564,13 @@ Enfin, en appuyant sur la touche \texttt{P}, l'utilisateur peut passer du mode s
 
 \bigbreak
 L'intérêt principale de la bibliothèque SDL est de pouvoir afficher le flux vidéo.
-Pour cela, le programme crée une fenêtre graphique SDL d'une résolution de 1280x720 pixels.
+Pour cela, le programme crée une fenêtre graphique SDL d'une résolution de \texttt{1280x720} pixels.
 Ensuite, une boucle récupère une image après l'autre (via l'entrée standard, donc le flux décompressé par FFmpeg).
 Si le programme est en mode avec traitement, alors on effectue des modifications sur le flux RAW (replacer les zones à leurs positions initiales et sur-échantillonner celles qui ont été sous-échantillonnées à l'émission). 
 Et on encadre la ZOI avec des bandes noires de 2 pixels d'épaisseur.
 Dans tous les cas, on termine par demander à SDL d'afficher l'image qui se trouve actuellement en mémoire.
 
-\begin{figure}[!htb]
+\begin{figure}[H]
 \minipage{0.49\textwidth}
   \includegraphics[width=\linewidth]{images/recepteur_sans_traitement.png}
   \caption{Récepteur en mode sans traitement}
@@ -589,9 +581,31 @@ Dans tous les cas, on termine par demander à SDL d'afficher l'image qui se trou
 \endminipage
 \end{figure}
 
+\subsection{Déplacement de la ZOI}
+
+L'intérêt principal de notre architecture est que la ZOI est déplaçable pendant la transmission du flux vidéo.
+
+\bigbreak
+Sur l'application Android, la commande de déplacement de la ZOI est envoyée lorsque l'utilisateur déplace sa tête et qu'il reste moins de la moitié de la ZOI actuelle à l'affichage.
+Sur l'application Linux, c'est l'utilisateur qui est libre de placer la ZOI à l'endroit de son choix avec les flèches directionnelles du clavier.
+
+\bigbreak
+Lorsqu'un déplacement de la ZOI est commandé par le récepteur, les nouvelles coordonnées désirées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle TCP.
+L'émetteur commence alors à générer les futures images en prenant en compte cette nouvelle ZOI et renvoie aussitôt sur le canal TCP le numéro de la frame à partir de laquelle cette nouvelle ZOI est appliquée.
+Côté récepteur, il s'agit donc d'attendre l'arrivée de cette image avant de déplacer les zones selon la nouvelle position de la ZOI.
+
+\bigbreak
+La principale difficulté de cette synchronisation est le comptage des images. En effet, s'il est aisé de connaître le numéro de l'image à l'émission, le nombre d'images reçues peut être inférieur, notamment en cas de perte de paquets lors de la transmission.
+Heureusement, chaque paquet PES transmis est encodé avec le PTS, \textit{Presentation timestamp}, qui indique à quel moment afficher l'image. Cet indicateur est ajouté à la compression et est donc entièrement synchronisé sur l'émetteur.
+Comme nous encodons avec un taux d'image constant, nous pouvons alors en déduire le numéro de l'image.
+Sur l'application Android, MediaCodec nous fournit cette information à la mise à jour de la surface.
+En revanche, sur le réception Linux qui reçoit simplement les octets correspondant aux images RAW, il n'y a pas de métadonnées transmises.
+Nous utilisons alors le module \texttt{showinfo} de FFmpeg qui écrit sur la sortie standard les informations de chaque image. La sortie est redirigée sur une entrée de notre récepteur qui connaît donc le numéro de frame en cours.
+
+
 \section{Résultats}
 
-Dans cette section, nous décrirons nos techniques d'évaluation et les résultats obtenus.
+Dans cette section, nous décrirons nos techniques d'évaluation et les résultats obtenus avec nos choix de traitement vidéo.
 L'objectif est de comparer la qualité d'image d'une même ZOI entre une compression standard et une compression avec notre traitement spécifique.
 
 \begin{figure}[H]
