@@ -514,10 +514,58 @@ X & 0 & 0 & 0 \\
 0 & 0 & Z & 0 \\
 0 & 0 & 0 & 1 \end{array} \right)\] 
 
-
 \bigbreak
 Enfin, lorsque l'angle de vision donné par le Cardboard est trop différent par rapport à la dernière ZOI connue, alors nous demandons au récepteur de déplacer la ZOI.
 Cette demande est faite via le canal TCP.
+
+\subsection{Le récepteur Linux}
+Nous allons maintenant détailler l'implémentation du récepteur Linux, qui réutilise un certain nombre de solutions utilisées dans l'émetteur.
+
+\bigbreak
+Notre programme récupère en entrée un flux vidéo RAW issu de FFmpeg, ce dernier est configuré pour recevoir le flux compressé de l'émetteur (via une socket UDP sur le port 1235).
+Au lancement, le programme va initier le canal de contrôle avec l'émetteur (sur le port TCP 1234).
+C'est grâce à cette connexion que le programme demandera le déplacement de la ZOI et qu'il recevra les futurs ZOI.
+
+\bigbreak
+La seule technologie présente dans ce récepteur et non dans l'émetteur est le SDL.
+SDL est une bibliothèque open source permettant de créer des interfaces graphiques 2D avec un accès bas niveau.
+Nous l'utilisons dans le récepteur pour :
+
+\bigbreak
+\begin{itemize}
+\item{Afficher le flux vidéo}
+\item{Récupérer les appuies clavier}
+\end{itemize}
+
+\bigbreak
+En effet, le module SDL permet de savoir sur quelles touches l'utilisateur appuie. 
+Pour déplacer la ZOI, l'utilisateur peut appuyer sur les flèches de son clavier, les nouvelles coordonnées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle.
+Enfin, en appuyant sur la touche "p", l'utilisateur peut passer du mode sans traitement au mode avec traitement.
+
+\bigbreak
+\begin{itemize}
+\item{sans traitement : affichage du flux vidéo sans replacer les zones ni les sur-échantillonner}
+\item{avec traitement : affichage du flux vidéo en replaçant les zones et les sur-échantillonner si nécessaire}
+\end{itemize}
+
+\bigbreak
+L'intérêt principale de la bibliothèque SDL est de pouvoir afficher le flux vidéo.
+Pour cela, le programme crée une fenêtre graphique SDL d'une résolution de 1280x720 pixels.
+Ensuite, une boucle récupère une image après l'autre (via l'entrée standard, donc le flux décompressé par FFmpeg).
+Si le programme est en mode avec traitement, alors on effectue des modifications sur le flux RAW (replacer les zones à leurs positions initiales et sur-échantillonner celles qui ont été sous-échantillonnées à l'émission). 
+Et on encadre la ZOI avec des bandes noires de 2 pixels d'épaisseur.
+Dans tous les cas, on termine par demander à SDL d'afficher l'image qui se trouve actuellement en mémoire.
+
+\begin{figure}[!htb]
+\minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{images/recepteur_sans_traitement.png}
+  \caption{Récepteur en mode sans traitement}
+\endminipage\hfill
+\minipage{0.49\textwidth}
+  \includegraphics[width=\linewidth]{images/recepteur_avec_traitement.png}
+  \caption{Récepteur en mode avec traitement}
+\endminipage
+\end{figure}
 
 \section{Résultats}
 
