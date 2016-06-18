@@ -84,7 +84,7 @@ void *task_video(void *data) {
 
 		printf("FRAME=%d\n", ++shared->imgCount);
 		write(pipeToF[1], buffer2, imgSize/2);
-		fwrite(buffer2, imgSize/2, 1, out);
+		//fwrite(buffer2, imgSize/2, 1, out);
 
 		free(blocs);
 		free(bloc);
