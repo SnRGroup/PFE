@@ -3,6 +3,7 @@ package com.legsim.snr_cardboard;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
@@ -18,6 +19,7 @@ import android.view.Surface;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;
@@ -196,7 +198,6 @@ public class MainActivity
             this.videoWorker = new VideoWorkerLocal(getApplicationContext());
         }
     }
-
 
     public void onNewFrame(HeadTransform headTransform) {
         MainActivity mainActivity = this;
@@ -483,7 +484,11 @@ public class MainActivity
                         PROCESSING_MODE_WITH :
                         PROCESSING_MODE_WITHOUT);
 
-                recreate();
+                // restart the app
+                Intent i = getBaseContext().getPackageManager()
+                        .getLaunchIntentForPackage( getBaseContext().getPackageName() );
+                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(i);
             }
         });
 

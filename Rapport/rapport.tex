@@ -471,16 +471,53 @@ Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coor
 
 \subsection{Cardboard}
 Pour terminer la partie sur le récepteur Android, nous allons maintenant aborder la partie réalité virtuelle avec le Cardboard.
-En effet, une des raisons principales qui a motivé notre choix vers Android comme base du récepteur, est le SDK Cardboard qui fonctionne lorsque le téléphone est placé dans un casque de réalité virtuelle compatible.
-Ainsi, l'application Anroid peut demander au SDK l'angle de vision de l'utilisateur à tout instant, le SDK va scinder l'écran en deux, appeler une fonction de call-back à chaque fois qu'il va dessiner l'image pour un des deux yeux, et appliquer un filtre pour corriger la distortion que rend les lentilles placées dans le casque.
+En effet, une des raisons principales qui a motivé notre choix vers Android comme base du récepteur, est la présence du SDK Cardboard.
+Ce kit de déveleppement est fait pour fonctionner avec un casque de réalité virtuelle compatible (un un simple morceau de plastique ou de carton, qui maintient l'écran du téléphone devant vos yeux et qui possède des lentilles pour faire converger la lumuière de l'écran vers l'oeil gauche ou l'oeil droit).
+La brique logicielle offerte par le SDK permet notamment de :
+
+\bigbreak
+\begin{itemize}
+\item{Connaitre l'angle de vision de l'utilisateur à tout instant}
+\item{Scinder l'écran en deux (une partie pour l'oeil gauche et l'autre partie pour l'oeil droit)}
+\item{Appliquer un filtre pour corriger la distortion causée par les lentilles placées dans le casque de réalité virtuelle}
+\item{Avoir une fonction de call-back qui est appelée à chaque fois que le SDK génère l'image pour l'un des deux yeux}
+\end{itemize}
+
+\bigbreak
+Afin de produire un effet immersif, nous effectuons un traitement OpenGL ES dans la fonction de call-back.
+Ce traitement a pour objectifs :
+
+\bigbreak
+\begin{itemize}
+\item{Centrer l'image sur l'angle de vision de l'utilisateur}
+\item{Zoomer x2 dans l'image}
+\end{itemize}
+
+\bigbreak
+Ces traitements permettent à l'utilisateur de voir uniquement la zone de l'image qui l'intéresse, et de déplacer cette zone via les mouvements de sa tête.
+Pour que OpenGL ES puisse appliquer ces opérations, nous utilisons une matrice pour la translation de l'image et une autre matrice pour le zoom.
+OpenGL ES nous offre des fonctions pour calculer les matrices en fonction des coefficents de translation ou du zoom pour les axes x, y, z (z reste toujours égal à 1 car nous sommes en 2d), mais les matrices générées sont simples à comprendre.
+
+\bigbreak
+Matrice de translation avec des coefficients pour l'axe X, Y et Z :
+\[ \left( \begin{array}{cccc}
+1 & 0 & 0 & X \\
+0 & 1 & 0 & Y \\
+0 & 0 & 1 & Z \\
+0 & 0 & 0 & 1 \end{array} \right)\] 
+
+\bigbreak
+Matrice de mise à l'échelle avec des coefficients pour l'axe X, Y et Z (pour zoomer, les valeurs doivent être positives) :
+\[ \left( \begin{array}{cccc}
+X & 0 & 0 & 0 \\
+0 & Y & 0 & 0 \\
+0 & 0 & Z & 0 \\
+0 & 0 & 0 & 1 \end{array} \right)\] 
 
 
 \bigbreak
-De plus, le SDK nous permet d'avoir une fonction de call-back qui sera appelée à chaque que l'image est dessinée pour un oeil.
-Dans cette fonction nous effectuons un dexuieme traitement OpenGL ES afin de déplacer l'image en fonction de l'angle de vision de l'utilisateur (récupéré via le SDK Cardboard) et nous zommons x2 dans l'image afin que l'utilisateur voit uniquement la zone correspondant à l'endroit où il regarde à un instant donné.
-Pour effectuer ce traitement, nous utilisons une matrice et les fonctions annexes que propose OpenGL ES.
-Tout d'abord nous créons une matrice identitaire, que nous translatons (via une fonction dédiée) vers le haut gauche de la zone que souhaite voir l'utilisateur, puis nous 
-
+Enfin, lorsque l'angle de vision donné par le Cardboard est trop différent par rapport à la dernière ZOI connue, alors nous demandons au récepteur de déplacer la ZOI.
+Cette demande est faite via le canal TCP.
 
 \section{Résultats}
 
