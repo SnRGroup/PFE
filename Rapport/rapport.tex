@@ -585,6 +585,14 @@ Dans tous les cas, on termine par demander à SDL d'afficher l'image qui se trou
 Dans cette section, nous décrirons nos techniques d'évaluation et les résultats obtenus.
 L'objectif est de comparer la qualité d'image d'une même ZOI entre une compression standard et une compression avec notre traitement spécifique.
 
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.4]{images/tests_schema.png}
+\end{center}
+\caption{Processus d'évaluation}
+\label{}
+\end{figure}
+
 \subsection{Génération des échantillons de test}
 La première étape est de capturer un flux vidéo de quelques secondes qui servira de base à notre chaîne de traitement.
 La capture de cet échantillon se fait forcément en format RAW afin de ne pas faire intervenir de compression à cette étape.
@@ -639,7 +647,7 @@ Nos deux testeurs ont conclu à une meilleure qualité de la moitié de la vidé
 Cela se distingue particulièrement sur les zones en mouvement et les dégradés de couleur.
 Sur les échantillons zoomés ci-après, l'effet de blocs est moins présent sur l'image de droite que sur l'image de gauche.
 
-\begin{figure}[!htb]
+\begin{figure}[H]
 \minipage{0.32\textwidth}
   \includegraphics[width=\linewidth]{images/comparaison_zoom_normal.png}
   \caption{Image compressée sans traitement}
