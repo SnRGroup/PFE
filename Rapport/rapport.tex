@@ -19,7 +19,7 @@ Page de garde
 
 \subsection{Objectif général}
 L'objectif général de notre projet de fin d'études, dit \textit{PFE}, est d'étudier et de mettre en place une chaîne de transmission vidéo.
-Nous ferons une étude technique et la réalisation de l'ensemble des étapes : de la station émettrice au récepteur, en passant par les techniques de mise en réseau.
+Nous ferons l'étude technique et la réalisation de l'ensemble des étapes : de la station émettrice au récepteur, en passant par les techniques de mise en réseau.
 
 \bigbreak
 Nous avons décidé de nous intéresser plus particulièrement à l'amélioration de la qualité d'une zone géographique d'un flux vidéo, au détriment du reste de la vidéo.
@@ -35,7 +35,11 @@ Nous essaierons de faire des choix technologiques les plus simples et compréhen
 Afin d'illustrer ce système en pratique, nous l'implémenterons au sein d'une solution de transmission vidéo distante en réalité virtuelle.
 Une station émettrice mobile capture un flux vidéo provenant d'une caméra à grand angle et transmet un flux qui sera alors reçu sur un autre terminal mobile n'affichant qu'une zone précise de l'image à travers une solution de réalité virtuelle de type Google Cardboard.
 Le terminal est donc déplacé avec les mouvements de tête du spectateur et la zone de visionnage est donc déplacée en conséquence pour obtenir un effet immersif.
-La nouvelle région d’intérêt est renvoyée du terminal mobile à l'émetteur pour faire à nouveau coïncider la zone visionnée avec la région d'intérêt à qualité améliorée.
+La nouvelle zone d’intérêt est renvoyée du terminal mobile à l'émetteur pour faire à nouveau coïncider la zone visionnée avec la région d'intérêt à qualité améliorée.
+
+\bigbreak
+Nous implémenterons aussi un récepteur sur ordinateur afin de montrer l'interopérabilité de notre solution.
+Ce récepteur aura disposera aussi des fonctionnalités de déplacement de la zone d'intérêt.
 
 \subsection{Contraintes qualitatives}
 
@@ -88,19 +92,18 @@ Cette recherche nous aura tout de même permis d'avoir un bon aperçu des techni
 \section{Détails d'implémentation}
 
 \subsection{Acquisition d'image RAW}
-Pour notre projet, nous nous sommes procurés une caméra à grand angle (180\degree) pour être en mesure de filmer l'intégralité d'une scène.
+Pour notre projet, nous nous sommes procuré une caméra à grand angle (180\degree) pour être en mesure de filmer l'intégralité d'une scène.
+
 \bigbreak
--> Photo Caméra
-\bigbreak
-La caméra est compatible avec le driver générique \textit{uvcvideo} inclus par défaut dans le noyau Linux, et peut donc être utilisée à travers \textit{Video4Linux 2}, V4L2.
+La caméra est compatible avec le driver générique \texttt{uvcvideo} inclus par défaut dans le noyau Linux, et peut donc être utilisée à travers \textit{Video4Linux 2}, V4L2.
 
 \bigbreak
 Afin d'obtenir l'image la moins altérée possible et de faciliter les futurs traitements sur l'image, nous récupérons les images RAW non-compressées.
-La caméra est capable, à travers l'USB2, de tenir un flux de données correspondant à des images d'une résolution de 1280x720 à une fréquence de 10 images par seconde.
+La caméra est capable, à travers l'USB2, de tenir un flux de données correspondant à des images d'une résolution de \texttt{1280x720} à une fréquence de 10 images par seconde.
 % Détail sur le débit en sortie du port USB ?
 
 \bigbreak
-L'acquisition est réalisée grâce à notre première instance de FFmpeg et à son module d'acquisition V4L2 qui permettent d'obtenir les octets correspondants sur la sortie standard pour la suite de notre traitement.
+L'acquisition est réalisée grâce à notre première instance de \texttt{FFmpeg} et à son module d'acquisition V4L2 qui permettent d'obtenir les octets correspondants sur la sortie standard pour la suite de notre traitement.
 
 \bigbreak
 La caméra utilisée présente une particularité : le capteur CMOS utilisé est un capteur standard et l'effet grand angle est obtenu par l'apposition d'une lentille convexe au-dessus.
@@ -117,16 +120,16 @@ Si cela permet alors d'obtenir un champ de vision très proche de 180\degree, l'
 \bigbreak
 
 Pour rendre des proportions réalistes aux abords de l'image, il est nécessaire de procéder à une correction de la déformation induite par la lentille.
-Heureusement, FFmpeg dispose d'un certain nombre de plugins de traitement d'image que nous pouvons utiliser pendant la phase d'acquisition d'image RAW.
+Heureusement, \texttt{FFmpeg} dispose d'un certain nombre de plugins de traitement d'image que nous pouvons utiliser pendant la phase d'acquisition d'image RAW.
 
 \bigbreak
-L'un d'entre eux, issu de la collection de plugins \textit{Frei0r}, est le plugin \textit{Defish0r}, relativement simple d'utilisation et qui permet d'annuler cet effet de distorsion.
+L'un d'entre eux, issu de la collection de plugins \texttt{Frei0r}, est le plugin \texttt{Defish0r}, relativement simple d'utilisation et qui permet d'annuler cet effet de distorsion.
 Malheureusement, les premiers tests ont montré que le plugin était trop gourmand en calcul CPU, et qu'il était impossible de traiter 10 images par seconde : le retard s'accumule rapidement.
 
 \bigbreak
-Un autre plugin, plus générique, est présent dans FFmpeg : \textit{lenscorrection}.
+Un autre plugin, plus générique, est présent dans \texttt{FFmpeg} : \texttt{lenscorrection}.
 Plus léger en calcul, il est capable de traiter nos 10 images par seconde avec notre carte Raspberry Pi 3.
-Son inconvénient est son paramétrage : le filtre demande deux coefficient correspondant aux termes de second et quatrième degrés dans la formule de correction :
+Son inconvénient est son paramétrage : le filtre demande deux coefficients correspondant aux termes de second et quatrième degrés dans la formule de correction :
 
 $$r_{src} = r_{targ} * (1 + k1*(\frac{r_{targ}}{r_0})^2 + k2*(\frac{r_{targ}}{r_0})^4)$$
 avec :
@@ -139,7 +142,7 @@ avec :
 
 \bigbreak
 
-La difficulté réside donc dans la détermination des coefficients $k1$ et $k2$ adaptés à notre configuration capteur+lentille.
+La difficulté réside donc dans la détermination des coefficients $k1$ et $k2$ adaptés à notre ensemble \{capteur+lentille\}.
 Les valeurs se situant dans l'intervalle $[-1;1]$, nous réalisons un test visuel en générant des images avec tous les couples de $(k1, k2)$ possibles en prenant un pas de $p=0.1$, soit une série de 441 images.
 
 \bigbreak
@@ -162,12 +165,12 @@ $$k1 = -0.4, k2 = 0.1$$
 Si nous avons maintenant une image brute corrigée, nous souhaitons lui appliquer notre traitement spécifique.
 
 \subsubsection{Format \texttt{YUV 4:2:0}}
-L'image RAW d'entrée est donc d'une résolution de 1280x720 avec un codage des pixels selon le format \texttt{YUV 4:2:0}.
-Ce format est très utilisé dans le codage de la vidéo car il est adapté à un visionnage par un œil humain : contrairement au format RGB qui code de façon égale les composantes rouge, verte et bleue de la vidéo, le format YUV code une information de luminance et une information de chrominance.
+L'image RAW d'entrée est donc d'une résolution de \texttt{1280x720} pixels avec un codage des pixels selon le format \texttt{YUV 4:2:0}.
+Ce format est très utilisé dans le codage de la vidéo car il est adapté à un visionnage par un œil humain : contrairement au format \texttt{RGB} qui code de façon égale les composantes rouge, verte et bleue de la vidéo, le format \texttt{YUV} code une information de luminance et une information de chrominance.
 Dans le cas du format \texttt{YUV 4:2:0}, il y a deux fois plus d'informations de luminance que de chrominance, tout simplement car l'œil humain est plus sensible aux différences de luminosité qu'aux différences de teinte.
 
 \bigbreak
-Plus précisément, les pixels sont répartis en blocs de 4 pixels (2x2).
+Plus précisément, les pixels sont répartis en blocs de 4 pixels (\texttt{2x2}).
 Chaque bloc contient 4 informations de luminance (une valeur \texttt{Y} pour chacun des 4 pixels), mais seulement une information de chrominance commune à l'ensemble du bloc (une valeur \texttt{U} et une valeur \texttt{V}).
 
 \begin{figure}[H]
@@ -180,9 +183,11 @@ Chaque bloc contient 4 informations de luminance (une valeur \texttt{Y} pour cha
 
 \bigbreak
 Chaque valeur de \texttt{Y}, \texttt{U} et \texttt{V} est codée sur un octet.
-Ainsi, la taille d'une image YUV d'une résolution de \texttt{8x8} pixels (16 blocs) peut être calculée comme ceci :
+Ainsi, la taille d'une image \texttt{YUV} d'une résolution de \texttt{8x8} pixels (16 blocs) comme celle ci-dessus peut être calculée comme ceci :
 
 $$ T = 16 * (4Y + 1U + 1V) = \mathbf{96}$$
+
+\bigbreak
 
 D'une manière générale, la taille d'une image \texttt{YUV 4:2:0} peut donc se calculer comme étant le nombre de pixels multiplié par $\frac{3}{2}$.
 Ainsi, chacune de nos images \texttt{1280x720} a une taille d'environ 1,4 Mo.
