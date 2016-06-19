@@ -193,8 +193,8 @@ D'une manière générale, la taille d'une image \texttt{YUV 4:2:0} peut donc se
 Ainsi, chacune de nos images \texttt{1280x720} a une taille d'environ 1,4 Mo.
 
 \bigbreak
-La répartition de ces informations dans la suite d'octets est un peu particulière : on trouve d'abord toutes les valeurs de Y, puis toutes les valeurs U et enfin de V.
-La lecture d'un bloc se fait donc en trois lectures consécutives.
+La répartition de ces informations dans la suite d'octets est un peu particulière : on trouve d'abord toutes les valeurs \texttt{Y}, puis toutes les valeurs \texttt{U} et enfin \texttt{V}.
+La lecture d'un bloc se fait donc en trois lectures successives.
 
 \begin{figure}[H]
 \begin{center}
@@ -212,12 +212,14 @@ Puisque nous avons fait le choix de ne pas intervenir au niveau du codec lui-mê
 L'idée est de conserver la zone d'intérêt dans sa résolution originelle et de diviser par un facteur quatre les dimensions des autres parties de l'image, c'est-à-dire diviser la largeur et la hauteur par deux.
 
 \bigbreak
-La zone d'intérêt a une dimension fixe choisie comme une moitié de largeur et hauteur totales, soit une résolution de \texttt{640x360} ou $\frac{1}{4}$ de la surface de l'image source.
+La zone d'intérêt a une dimension fixe choisie comme une moitié de largeur et hauteur totales, soit une résolution de \texttt{640x360} pixels ou $\frac{1}{4}$ de la surface de l'image source.
 Ainsi, dans l'idéal, notre image traîtée finale a une résolution d'une fraction de celle de l'image source :
 
 $$ R = \frac{1}{4} + \frac{3}{4}*\frac{1}{4} = \mathbf{\frac{7}{16}} $$
 
-Ce résultat est le résultat que nous pourrions obtenir en découpant de façon idéale les zones.
+\bigbreak
+
+Ce résultat est celui que nous pourrions obtenir en découpant de façon idéale les zones.
 Pour des raisons de complexité de calculs, nous essaierons de garder les zones entières lors de nos déplacements.
 
 \begin{figure}[H]
@@ -234,8 +236,8 @@ Elle est placée dans la seconde moitié de l'image, laissant ainsi une autre fe
 
 \bigbreak
 Pour rappel, la ZOI a une taille fixe mais sa position de départ est variable et contrôlée par le client récepteur.
-Ainsi, les autres zones autour de cette ZOI sont de taille variable, en fonction du point de départ de la ZOI qui nous définirons par le couple \texttt{(zoiX, zoiY)}.
-Les positions et dimensions des différentes sont alors définies comme cela :
+Ainsi, les autres zones autour de cette ZOI sont de taille variable, en fonction du point de départ de la ZOI que nous définirons par le couple \texttt{(zoiX, zoiY)}.
+Les positions et dimensions des différentes zones sont alors définies comme cela :
 \bigbreak
 \begin{itemize}
 \item{Zone 1 : position=\texttt{(0, 0)} ; dimensions=\texttt{(zoiX, imgHeight)}}
@@ -249,12 +251,12 @@ avec :
 \begin{itemize}
 \item{\texttt{(zoiX, zoiY)} : position actuelle de la ZOI}
 \item{\texttt{(zoiW, zoiH)} : taille de la ZOI, dans notre cas \texttt{(640, 360)}}
-\item{\texttt{imgWidth, imgHeight} : dimensions de l'image d'origine, dans notre cas \texttt{(1280, 720)}}
+\item{\texttt{(imgWidth, imgHeight)} : dimensions de l'image d'origine, dans notre cas \texttt{(1280, 720)}}
 \end{itemize}
 
 \bigbreak
 Les quatre zones sont ensuite sous-échantillonnées : les largeurs et hauteurs sont divisées par deux, procédant ainsi à une réduction de la résolution d'un facteur 4.
-Pour cela, nous transformons chaque groupe de quatre blocs YUV en un seul bloc selon le procédé suivant :
+Pour cela, nous transformons chaque groupe de quatre blocs \texttt{YUV} en un seul bloc selon le procédé suivant :
 
 \begin{figure}[H]
 \begin{center}
@@ -298,7 +300,7 @@ $V_{reduit} = \frac{V1 + V2 + V5 + V6}{4}$
 
 \bigbreak
 Après avoir appliqué cette transformation sur l'ensemble de nos quatre blocs, on obtient quatre blocs aux dimensions variables en fonction de \texttt{zoiX} et \texttt{zoiY}.
-Il y a cependant des agencements possibles de nos blocs qui donnent des dimensions constantes.
+Il existe cependant différents agencements possibles de nos blocs qui donnent des dimensions constantes.
 Après avoir réduit nos zones selon le principe que l'on vient de décrire, on leur trouve les dimensions suivantes :
 
 \bigbreak
@@ -310,7 +312,7 @@ Après avoir réduit nos zones selon le principe que l'on vient de décrire, on 
 \end{itemize}
 
 \bigbreak
-On peut tout de suite trouver un assemblage constant pour les zones 1 et 2 réduites : elles font la même hauteur et leur largeur commune ne dépend pas de la position de la ZOI : ils sont complémentaires.
+On peut tout de suite trouver un assemblage constant pour les zones 1 et 2 réduites : elles font la même hauteur et leur largeur commune ne dépend pas de la position de la ZOI : elles sont complémentaires.
 
 $$ W_1 + W_2 = \frac{zoiX}{2} + \frac{imgWidth-(zoiX+zoiW)}{2} = \frac{imgWidth - zoiW}{2}$$
 $$ = \mathbf{\frac{imgWidth}{4}} $$
@@ -322,6 +324,7 @@ Le même principe s'applique aux zones 3 et 4, avec cette fois-ci une largeur co
 $$ H_3 + H_4 = \frac{zoiY}{2} + \frac{imgHeight-(zoiY+zoiH)}{2} = \frac{imgHeight - zoiH}{2} $$
 $$ = \mathbf{\frac{imgHeight}{4}} $$
 
+\bigbreak
 Les zones 3 et 4 l'une après l'autre forment donc une zone de dimension constante \texttt{($\frac{imgWidth}{4}$, $\frac{imgHeight}{4}$)}.
 Nous avons choisi d'utiliser la répartition suivante :
 
@@ -344,21 +347,21 @@ Une fois notre image modifiée, l'étape suivante est de la compresser et de la 
 
 \subsubsection{Initialisation réseau}
 Notre programme principal, que l'on nommera \textit{handler} dans la suite de ce rapport, gère le flux RAW d'entrée, la connexion avec le récepteur, et l'interaction avec notre compresseur vidéo.
-Au lancement du programme, le programme crée une socket d'écoute TCP sur le port \texttt{1234}.
+Au lancement du programme, le programme crée une socket d'écoute \texttt{TCP} sur le port \texttt{1234}.
 C'est sur ce port que le client récepteur doit venir initier une connexion.
 
 \bigbreak
-À la première connexion détectée et une fois le \textit{handshake} TCP effectué, notre programme connaît alors l'adresse IP du récepteur intéressé par notre flux vidéo.
-Cette socket TCP restera ouverte entre l'émetteur et le récepteur pour la signalisation par la suite.
+À la première connexion détectée et une fois le \textit{handshake} \texttt{TCP} effectué, notre programme connaît alors l'adresse IP du récepteur intéressé par notre flux vidéo.
+Cette socket \texttt{TCP} restera ouverte entre l'émetteur et le récepteur pour la signalisation par la suite.
 
 \subsubsection{Envoi des images vidéo}
-Notre programme se met à lire son entrée standard sur laquelle sont envoyées les images RAW de la caméra (par la première instance FFmpeg) puis lui applique notre traitement spécifique.
-Il lance ensuite une seconde instance de FFmpeg, configurée cette fois-ci en tant qu'encodeur vidéo.
+Notre programme se met à lire son entrée standard sur laquelle sont envoyées les images RAW de la caméra (par la première instance \texttt{FFmpeg}) puis lui applique notre traitement spécifique.
+Il lance ensuite une seconde instance de \texttt{FFmpeg}, configurée cette fois-ci en tant qu'encodeur vidéo.
 L'instance prend en entrée nos images RAW traitées d'une résolution de \texttt{640x720} et les encode en utilisant le codec H.264.
 Quelques options spécifiques à nos besoins ont été ajoutées :
 
-\paragraph{\texttt{-preset ultrafast}} est d'un ensemble d'option prédéfinies configurant le codec H.264 pour faire une compression légère.
-En effet, puisque nous lisons les images à un rythme de 10 par seconde, la compression de chaque image doit se faire suffisamment rapidement, c'est-à-dire ne pas excéder 100 ms.
+\paragraph{\texttt{-preset ultrafast}} est un ensemble d'option prédéfinies configurant le codec H.264 pour faire une compression légère.
+En effet, puisque nous lisons les images à un rythme de 10 par seconde, la compression de chaque image doit se faire suffisamment rapidement, c'est-à-dire ne pas excéder 100 ms, si l'on veut fonctionner en temps réel.
 
 \paragraph{\texttt{-tune zerolatency}} permet à H.264 de ne pas utiliser d'images B dans ses \textit{Group of Pictures}.
 Les images B sont des images différentielles qui tiennent compte à la fois des images passées et des images futures.
@@ -369,156 +372,155 @@ Or, nous souhaitons obtenir la latence la plus faible possible, d'où la désact
 Chacun de ces GoP contient donc une image clé et des images différentielles à la suite.
 Une valeur de 10 assure donc la présence d'une image clé toutes les 10 images.
 Si ce choix est aussi néfaste pour le débit du flux vidéo, il permet d'éviter une accumulation d'erreur trop importante à la réception.
-En effet, en cas de paquets perdus, une image différentielle peut être manquée et un artefact vidéo apparaît alors à la réception.
-La valeur de 10 nous assure que l'artefact sera gommé dans le pire des cas dans l'une des 9 images à suivre.
+En effet, en cas de paquets perdus, une image différentielle peut être manquée et un artéfact vidéo apparaît alors à la réception.
+La valeur de 10 nous assure que l'artéfact sera gommé dans le pire des cas dans l'une des 9 images à suivre.
 
 \paragraph{\texttt{-b:v 1500k}} définit le débit constant à utiliser par le codec H.264.
 Ce débit dépend de la qualité que l'on souhaite atteindre et des conditions réseau dans lesquelles nous travaillons.
 
 \bigbreak
-FFmpeg est ensuite paramétré pour envoyer les flux vidéo H.264 dans des paquets MPEG-TS encapsulés dans des paquets UDP.
+\texttt{FFmpeg} est ensuite paramétré pour envoyer les flux vidéo H.264 dans des paquets \texttt{MPEG-TS} encapsulés dans des paquets \texttt{UDP}.
 Ces paquets sont à destination du port \texttt{1235} du client récepteur.
-Afin de respecter la spécification MPEG-TS, les paquets UDP ont un \textit{payload} de 188 octets, inférieur à la majorité des MTU, pouvant ainsi être utilisé sur tout type de réseau.
+Afin de respecter la spécification \texttt{MPEG-TS}, les paquets \texttt{UDP} ont un \textit{payload} de 188 octets, inférieur à la majorité des \texttt{MTU} (\textit{Maximum Transmission Unit}), pouvant ainsi être utilisé sur tout type de réseau.
 
 \subsection{Android}
 Pour la partie réception mobile, nous avons choisi d'utiliser un smartphone Android comme support de développement.
 En effet, le kit de développement offert par Google est gratuit, disponible sur des appareils mobiles et avec une puissance assez élevée pour effectuer du traitement vidéo en direct.
-De plus, depuis quelques années, Google développe un écosystème de réalité de virtuelle pour Android.
+De plus, depuis quelques années, Google développe un écosystème de réalité virtuelle pour Android.
 
 \subsubsection{Architecture de l'application}
 Nous avons donc développé une application Android en Java, qui récupère le flux video en Wi-Fi, décompresse la vidéo et l'affiche sur l'écran pour un casque de type Cardboard.
-Cette application comporte une activité qui démarre la partie réception vidéo et affiche le flux vidéo. De plus, cette activité possède un menu qui permet à l'utilisateur d'activer ou non le traitement vidéo et de définir sa source vidéo (une une vidéo de test embarquée dans l'application ou le flux vidéo d'un émetteur).
-Nous avons implémenté deux modules de réception vidéo différents mais qui implémente la même interface Java afin d'être facilement interchangeable par l'activité qui les lance.
+Cette application comporte une activité qui démarre la partie réception vidéo et affiche le flux vidéo. De plus, cette activité possède un menu qui permet à l'utilisateur d'activer ou non le traitement vidéo et de définir sa source vidéo (une vidéo de test embarquée dans l'application ou bien le flux vidéo d'un émetteur).
+Nous avons implémenté deux modules de réception vidéo différents mais qui implémentent la même interface Java afin d'être facilement interchangeable par l'activité qui les lance.
 
 \subsubsection{Récepteur local}
 Le premier récepteur est une version simplifée qui utilise une vidéo stockée en local (dans l'application).
 Le but de ce récepteur est de tester l'application, et notamment le traitement vidéo, sans avoir à utiliser un émetteur.
 
 \bigbreak
-Techniquement, c'est un thread qui va régulierement lire le flux vidéo et l'envoyer au décodeur vidéo. 
-Pour lire le flux vidéo, nous utilisons un extracteur qui permet de parser un fichier vidéo. 
-Nous pouvons ensuite demander à l'extracteur le type de la vidéo contenue dans le fichier, puis d'écrire une partie partie du flux vidéo dans un buffer.
+Techniquement, c'est un \textit{thread} qui va régulierement lire le flux vidéo et l'envoyer au décodeur vidéo. 
+Pour lire le flux vidéo, nous utilisons un extracteur qui permet de décoder un fichier vidéo. 
+L'extracteur nous fournit les métadonnées relatives au flux en cours de lecture ainsi que l'écriture dans des tampons mémoires.
 
 \bigbreak
-Pour décoder ce flux vidéo, nous utilisons l'API MediaCodec qui permet d'accéder au support multimédia bas-niveau fournit par Android. Ce MediaCodec permet, entre autres, de décoder un flux vidéo.
-Pour fonctionner, nous configurons un mediaCodec avec les paramètres de la vidéo (trouvés via l'extracteur) ainsi que la surface dans laquelle la vidéo décodée doit être envoyée (cette partie sera expliquée dans la sous-section suivante).
-Grâce à notre thread, nous allons régulièrement demander à l'extracteur les données suivantes du flux vidéo, et nous transferons ces données au mediaCodec.
-Le mediaCodec décode alors cette nouvelle partie du flux vidéo et envoye les images décodées à la surface.
+Pour décoder ce flux vidéo, nous utilisons l'API \texttt{MediaCodec} qui permet d'accéder au support multimédia bas-niveau fourni par Android. Ce \texttt{MediaCodec} permet, entre autres, de décoder un flux vidéo.
+Pour fonctionner, nous configurons un \texttt{MediaCodec} avec les paramètres de la vidéo (déterminés via l'extracteur) ainsi que la surface dans laquelle la vidéo décodée doit être envoyée (cette partie sera expliquée dans la sous-section suivante).
+Grâce à notre \textit{thread}, nous allons régulièrement demander à l'extracteur les données suivantes du flux vidéo, et nous transférons ces données au \texttt{MediaCodec}.
+Le \texttt{MediaCodec} décode alors cette nouvelle partie du flux vidéo et envoie les images décodées à la surface.
 
 \subsubsection{Récepteur réseau}
-La deuxième implémentation du module de réception vidéo est similaire à la précédante, hormis que l'on récupère le flux vidéo sur un équipement distant.
-Ce module remplace donc l'extrateur par deux sockets réseaux.
+La deuxième implémentation du module de réception vidéo est similaire à la précédente, à la différence que nous récupèrons le flux vidéo sur un équipement distant.
+Ce module remplace donc l'extracteur par deux sockets réseaux.
 
 \bigbreak
-Tout d'abord, le récepteur se connecte à l'émetteur via une socket TCP pour initier le canal de contrôle.
-C'est sur ce canal que les informations conncernant la ZOI sont échangées entre l'émetteur et le récepteur.
+Tout d'abord, le récepteur se connecte à l'émetteur via une socket \texttt{TCP} pour initier le canal de contrôle.
+C'est sur ce canal que les informations concernant la ZOI sont échangées entre l'émetteur et le récepteur.
 
 \bigbreak
-Puis, l'application écoute sur un port UDP pour récupérer le flux vidéo envoyé par l'émetteur.
-Plus précisement, les datagrammes UDP contiennent des paquets MPEG-TS.
-Ces paquets MPEG-TS encapsulent des fragments de paquets PES (\textit{Packetized Elementary Stream}) qui correspondent aux données du flux vidéo compressé.
-Une fois un paquet PES reconstitué (à l'aide de plusieurs paquets MPEG-TS), il est transféré au mediaCodec.
-Le MediaCodec décode alors la partie du flux vidéo qui est présent dans le paquet et envoye les images décodées à la surface.
+Puis, l'application écoute sur un port \texttt{UDP} pour récupérer le flux vidéo envoyé par l'émetteur.
+Plus précisement, les datagrammes \texttt{UDP} contiennent des paquets \texttt{MPEG-TS}.
+Ces paquets \texttt{MPEG-TS} encapsulent des fragments de paquets \texttt{PES} (\textit{Packetized Elementary Stream}) qui correspondent aux données du flux vidéo compressé.
+Une fois un paquet \texttt{PES} reconstitué (à l'aide de plusieurs paquets \texttt{MPEG-TS}), il est transféré au \texttt{MediaCodec}.
+Le \texttt{MediaCodec} décode alors la partie du flux vidéo présent dans le paquet et envoie les images décodées à la surface.
 
 \begin{figure}[H]
 \begin{center}
 \includegraphics[scale=0.35]{images/decodage_video.png}
 \end{center}
-\caption{Schéma explicatif du décodage vidéo dans l'application Android}
+\caption{Décodage vidéo en réseau dans l'application Android}
 \label{}
 \end{figure}
 
 
 \subsection{OpenGL ES}
 Nous allons maintenant aborder la partie traitement vidéo effectuée par le récepteur.
-Ce traitement consiste à translater les zones de l'image à leur place initiale et sur-échantillonner les zones qui ont été sous-échantillonnées par l'émetteur.
+Ce traitement consiste à faire l'inverse de notre traitement spécifique effectué par l'émetteur, c'est-à-dire à translater les zones de l'image à leur position initiale et à sur-échantillonner les zones qui ont été sous-échantillonnées à l'émission.
 
 \bigbreak
-Pour rappel, ce traitement s'effectue après le décodage du flux vidéo, afin de pouvoir réutiliser un décodeur vidéo déjà existant.
-Nous avions commencé par effectuer ce traitement en Java. 
-Pour cela, nous récupérions l'image en sortie du décodeur (via un tableau de bytes), parsions ses pixels et les recopions dans un autre tableau.
-Cette partie de l'algorithme prennait trop de temps à s'exécuter pour un flux continu, c'est-à-dire que ce traitement était plus long que le délai inter-image du flux vidéo.
-De plus, cette algorithme ne comportait que la partie translation et pas encore la partie sur-échantillonnage.
+Pour rappel, ce traitement s'effectue après le décodage du flux vidéo, puisque nous avons fait le choix de pouvoir réutiliser un décodeur vidéo déjà existant.
+Nous première approche a été logicielle : nous avons essayé d'effectuer ce traitement côté applicatif Java.
+Pour cela, nous récupérions l'image en sortie du décodeur (via un tableau d'octets), traitions ses pixels et les recopions dans un autre tableau.
+Malheureusement, cette partie de l'algorithme prenait trop de temps à s'exécuter pour un flux continu, c'est-à-dire que ce traitement était plus long que le délai inter-image du flux vidéo : il nous fallait trouver une autre approche.
 
 \bigbreak
-C'est pourquoi, nous avons décidé d'effectuer ce traitement via OpenGL ES.
-En effet, OpenGL ES (Open Graphics Library for Embedded System) est une API qui permet d'effectuer des calculs d'images. 
-OpenGL ES est une simplification de OpenGL optimisée pour les appareils mobiles et est bien intégrée dans Android.
+C'est pourquoi, nous avons décidé d'effectuer ce traitement via \texttt{OpenGL ES}.
+En effet, \texttt{OpenGL ES} (\textit{Open Graphics Library for Embedded System}) est une API qui permet d'effectuer des calculs d'images sur du matériel prévu pour cet usage, comme une puce graphique. 
+\texttt{OpenGL ES} est une simplification de \texttt{OpenGL} optimisée pour les appareils mobiles et est bien intégrée dans Android.
 C'est la façon la plus courante d'utiliser la puce graphique d'un appareil depuis une application Android.
 
 \bigbreak
-Pour pouvoir utiliser OpenGL ES dans notre application, nous avons intégré une surfaceTexture dans notre activité.
-Une surfaceTexture est un objet qui nous permet d'effectuer un traitement OpenGL ES sur un flux vidéo.
-Contretement, la surfaceTexture récupère un flux vidéo en entée, appelle une fonction de call-back à chaque nouvelle image, et renvoie le flux en direct à une surface.
-Une surface encapsule un tableau d'une image raw qui est envoyé au controleur vidéo du mobile afin d'afficher l'image sur l'écran de l'appareil.
-Il nous suffit donc d'effectuer nos appels OpenGL ES dans la fonction de call-back proposée par la surfaceTexture.
+Pour pouvoir utiliser \texttt{OpenGL ES} dans notre application, nous avons intégré une surfaceTexture dans notre activité.
+Une \texttt{SurfaceTexture} est un objet qui nous permet d'effectuer un traitement \texttt{OpenGL ES} sur une image.
+Concrètement, la \texttt{SurfaceTexture} récupère une image en entrée et renvoie le flux en direct à une surface.
+Une surface encapsule une représentation d'une image RAW qui est envoyée au controleur vidéo du mobile afin d'afficher l'image sur l'écran de l'appareil.
+Il nous suffit donc d'effectuer nos traitements \texttt{OpenGL ES} lorsque la \texttt{SurfaceTexture} reçoit une nouvelle image, avant de mettre à jour la surface finale.
 
 \bigbreak
-Comme expliqué dans la partie émetteur, le récepteur reçoit un flux vidéo traité dont les zones de l'image sont translatées et certaines sous-échantillonnées.
+Comme expliqué dans la partie concernant l'émetteur, le récepteur reçoit un flux vidéo traité dont les zones de l'image sont translatées et certaines sous-échantillonnées.
 De plus, le récepteur connait la position initiale du point haut gauche de la ZOI (via le canal de contrôle).
-Connaissant les résolutions initiniales et finales de toutes les zones, le récepteur peut en déduire les coordonnées des zones dans l'image reçue et dans l'image à afficher.
+Connaissant les résolutions initiales et finales de toutes les zones, le récepteur peut en déduire les coordonnées des zones dans l'image reçue et dans l'image à afficher.
 
 \begin{figure}[H]
 \begin{center}
 \includegraphics[scale=0.35]{images/schema_traitement_video_retour.png}
 \end{center}
-\caption{Schéma explicatif du traitement vidéo effectué par OpenGL ES}
+\caption{Traitement vidéo effectué par \texttt{OpenGL ES}}
 \label{}
 \end{figure}
 
 \bigbreak
-Ce traitement est assez simple à programmer pour OpenGL ES, il suffit de connaitre les coordonnées avant et après traitement pour tous les blocs.
-De plus, si l'aire après traitement d'un bloc est plus grande que l'aire initiale, alors OpenGL ES effectuera automatiquement un sur-échantillonnage.
-La seule subtilitée à savoir est que, pour de la 2D, OpenGL ES ne sait pas utiliser des rectangles mais uniquement des triangles.
-Il faut donc utliser deux triangles par bloc.
-Ainsi, si l'on veut transformer un bloc de coordonnnées ABCD en un bloc de coordonnées EFGH, il suffit d'envoyer trois listes à OpenGL ES :
+Ce traitement est assez simple à programmer pour \texttt{OpenGL ES}, il suffit de connaitre les coordonnées pré- et post-traitement pour chacune des zones.
+De plus, si l'aire désirée après traitement d'une zone est plus grande que l'aire initiale, alors \texttt{OpenGL ES} effectuera automatiquement un sur-échantillonnage.
+La seule subtilitée à savoir est que, pour de la 2D, \texttt{OpenGL ES} ne sait pas utiliser des rectangles mais uniquement des triangles.
+Il faut donc utliser deux triangles par zones.
+Ainsi, si l'on veut transformer une zone de coordonnnées \texttt{ABCD} en une zone de coordonnées \texttt{EFGH}, il suffit d'envoyer trois listes à OpenGL ES :
 
 \bigbreak
 \begin{itemize}
-\item{[A, B, C, D] : coordoonées de départ}
-\item{[E, F, G, H] : coordoonées d'arrivée}
-\item{[0, 1, 2, 0, 2, 3] : positions, dans les listes précédantes, des coordonnées des triangles à copier dans la surface finale (ABC => EFG et ACD => EGH)}
+\item{[A, B, C, D] : coordonnées de départ}
+\item{[E, F, G, H] : coordonnées d'arrivée}
+\item{[0, 1, 2, 0, 2, 3] : positions, dans les listes précédantes, des coordonnées des triangles à copier dans la surface finale (ABC $\rightarrow$ EFG et ACD $\rightarrow$ EGH)}
 \end{itemize}
 
 \begin{figure}[H]
 \begin{center}
 \includegraphics[scale=0.35]{images/OpenGL_ES.png}
 \end{center}
-\caption{Exemple de traitement sur un bloc via OpenGL ES}
+\caption{Exemple de traitement sur un bloc via \texttt{OpenGL ES}}
 \label{}
 \end{figure}
 
 \subsection{Cardboard}
 Pour terminer la partie sur le récepteur Android, nous allons maintenant aborder la partie réalité virtuelle avec le Cardboard.
-En effet, une des raisons principales qui a motivé notre choix vers Android comme base du récepteur, est la présence du SDK Cardboard.
-Ce kit de déveleppement est fait pour fonctionner avec un casque de réalité virtuelle compatible (un un simple morceau de plastique ou de carton, qui maintient l'écran du téléphone devant vos yeux et qui possède des lentilles pour faire converger la lumuière de l'écran vers l'oeil gauche ou l'oeil droit).
+En effet, une des raisons principales qui a motivé notre choix vers Android comme base du récepteur est la présence du SDK Cardboard.
+Ce kit de déveleppement est fait pour fonctionner avec un casque de réalité virtuelle compatible (un simple morceau de plastique ou de carton, qui maintient l'écran du téléphone devant vos yeux et qui possède des lentilles pour faire converger la lumière de l'écran vers l'œil gauche ou l'œil droit).
 La brique logicielle offerte par le SDK permet notamment de :
 
 \bigbreak
 \begin{itemize}
 \item{Connaitre l'angle de vision de l'utilisateur à tout instant}
-\item{Scinder l'écran en deux (une partie pour l'oeil gauche et l'autre partie pour l'oeil droit)}
-\item{Appliquer un filtre pour corriger la distortion causée par les lentilles placées dans le casque de réalité virtuelle}
-\item{Avoir une fonction de call-back qui est appelée à chaque fois que le SDK génère l'image pour l'un des deux yeux}
+\item{Scinder l'écran en deux (une partie pour l'œil gauche et l'autre partie pour l'œil droit)}
+\item{Appliquer un filtre pour corriger la distorsion causée par les lentilles placées dans le casque de réalité virtuelle}
+\item{Programmer des appels logiciels déclenchés à chaque fois que le SDK génère l'image pour l'un des deux yeux}
 \end{itemize}
 
 \bigbreak
-Afin de produire un effet immersif, nous effectuons un traitement OpenGL ES dans la fonction de \textit{callback}.
-Ce traitement a pour objectifs :
+Afin de produire un effet immersif, nous effectuons un traitement supplémentaire \texttt{OpenGL ES} à chaque nouvel affichage d'image.
+Ce traitement a pour objectifs de :
 
 \bigbreak
 \begin{itemize}
 \item{Centrer l'image sur l'angle de vision de l'utilisateur}
-\item{Zoomer x2 dans l'image}
+\item{Zoomer deux fois dans l'image}
 \end{itemize}
 
 \bigbreak
-Ces traitements permettent à l'utilisateur de voir uniquement la zone de l'image qui l'intéresse, et de déplacer cette zone via les mouvements de sa tête.
-Pour que OpenGL ES puisse appliquer ces opérations, nous utilisons une matrice pour la translation de l'image et une autre matrice pour le zoom.
-OpenGL ES nous offre des fonctions pour calculer les matrices en fonction des coefficents de translation ou du zoom pour les axes x, y, z (z reste toujours égal à 1 car nous sommes en 2d), mais les matrices générées sont simples à comprendre.
+Ces traitements permettent à l'utilisateur de voir uniquement la zone de l'image qui l'intéresse, et de déplacer cette zone avec les mouvements de sa tête.
+Pour que \texttt{OpenGL ES} puisse appliquer ces opérations, nous utilisons une matrice pour la translation de l'image et une autre matrice pour le zoom.
+\texttt{OpenGL ES} nous offre des fonctions pour calculer les matrices en fonction des coefficents de translation ou du zoom pour les axes \texttt{X}, \texttt{Y} et \texttt{Z} (\texttt{Z} reste toujours égal à 1 car nous sommes en 2D), mais les matrices générées sont simples à comprendre.
 
 \bigbreak
-Matrice de translation avec des coefficients pour l'axe X, Y et Z :
+Matrice de translation avec des coefficients pour les axes \texttt{X}, \texttt{Y} et \texttt{Z} :
 \[ \left( \begin{array}{cccc}
 1 & 0 & 0 & X \\
 0 & 1 & 0 & Y \\
@@ -526,7 +528,7 @@ Matrice de translation avec des coefficients pour l'axe X, Y et Z :
 0 & 0 & 0 & 1 \end{array} \right)\] 
 
 \bigbreak
-Matrice de mise à l'échelle avec des coefficients pour l'axe X, Y et Z (pour zoomer, les valeurs doivent être positives) :
+Matrice de mise à l'échelle avec des coefficients pour les axes \texttt{X}, \texttt{Y} et \texttt{Z} (pour zoomer, les valeurs doivent être positives) :
 \[ \left( \begin{array}{cccc}
 X & 0 & 0 & 0 \\
 0 & Y & 0 & 0 \\
@@ -534,20 +536,23 @@ X & 0 & 0 & 0 \\
 0 & 0 & 0 & 1 \end{array} \right)\] 
 
 \bigbreak
-Enfin, lorsque l'angle de vision donné par le Cardboard est trop différent par rapport à la dernière ZOI connue, alors nous demandons au récepteur de déplacer la ZOI.
+Enfin, lorsque l'angle de vision actuel de l'utilisateur s'éloigne trop de la dernière ZOI connue, nous demandons au récepteur de déplacer la ZOI.
 Cette demande est faite via le canal TCP.
 
 \subsection{Le récepteur Linux}
 Nous allons maintenant détailler l'implémentation du récepteur Linux, qui réutilise un certain nombre de solutions utilisées dans l'émetteur.
+Ce récepteur est conçu pour fonctionner sur un ordinateur de bureau Linux et est capable, tout comme le récepteur Android, d'afficher le flux et de fonctionner avec notre traitement vidéo.
+La différence majeure est qu'il n'y a pas de déplacement à l'intérieur de l'image : l'image entière est affichée en permanence.
 
 \bigbreak
-Notre programme récupère en entrée un flux vidéo RAW issu d'une instance FFmpeg configurée pour recevoir le flux compressé H.264 de l'émetteur (via une socket UDP sur le port 1235).
-Au lancement, le programme va initier le canal de contrôle avec l'émetteur (sur le port TCP 1234), comme le fait le récepteur Android.
+Notre programme récupère en entrée un flux vidéo RAW issu d'une instance \texttt{FFmpeg} configurée pour recevoir le flux compressé H.264 de l'émetteur (via une socket \texttt{UDP} sur le port \texttt{1235}).
+Au lancement, le programme va initier le canal de contrôle avec l'émetteur (sur le port \texttt{TCP} \texttt{1234}), comme le fait le récepteur Android.
 C'est grâce à cette connexion que le programme demandera le déplacement de la ZOI et qu'il recevra les informations de synchronisation de ZOI.
 
 \bigbreak
-La seule technologie présente dans ce récepteur et non dans l'émetteur est le SDL.
-SDL est une bibliothèque open source permettant de créer des interfaces graphiques 2D avec un accès bas niveau.
+Une bonne partie de la base de code est réutilisée entre notre émetteur et notre récepteur.
+La seule technologie supplémentaire par rapport à l'émetteur est le SDL.
+SDL est une bibliothèque open-source permettant de créer des interfaces graphiques 2D avec un accès bas niveau.
 Nous l'utilisons dans le récepteur pour :
 
 \bigbreak
@@ -568,12 +573,12 @@ Enfin, en appuyant sur la touche \texttt{P}, l'utilisateur peut passer du mode s
 \end{itemize}
 
 \bigbreak
-L'intérêt principale de la bibliothèque SDL est de pouvoir afficher le flux vidéo.
+L'intérêt principal de la bibliothèque SDL est de pouvoir afficher le flux vidéo.
 Pour cela, le programme crée une fenêtre graphique SDL d'une résolution de \texttt{1280x720} pixels.
-Ensuite, une boucle récupère une image après l'autre (via l'entrée standard, donc le flux décompressé par FFmpeg).
-Si le programme est en mode avec traitement, alors on effectue des modifications sur le flux RAW (replacer les zones à leurs positions initiales et sur-échantillonner celles qui ont été sous-échantillonnées à l'émission). 
-Et on encadre la ZOI avec des bandes noires de 2 pixels d'épaisseur.
-Dans tous les cas, on termine par demander à SDL d'afficher l'image qui se trouve actuellement en mémoire.
+Ensuite, une boucle récupère une les images décompressées par \texttt{FFmpeg}).
+Si le programme fonctionne avec traitement, alors nous effectuons les modifications sur le flux RAW (replacer les zones à leurs positions initiales et sur-échantillonner celles qui ont été sous-échantillonnées à l'émission). 
+Afin de permettre d'apprécier la différence de qualité entre la ZOI et les autres zones, nous encadrons la ZOI par une bordure noire dans ce même traitement.
+Dans tous les cas, le programme termine par l'affichage de l'image qui se trouve actuellement en mémoire.
 
 \begin{figure}[H]
 \minipage{0.49\textwidth}
@@ -595,17 +600,22 @@ Sur l'application Android, la commande de déplacement de la ZOI est envoyée lo
 Sur l'application Linux, c'est l'utilisateur qui est libre de placer la ZOI à l'endroit de son choix avec les flèches directionnelles du clavier.
 
 \bigbreak
-Lorsqu'un déplacement de la ZOI est commandé par le récepteur, les nouvelles coordonnées désirées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle TCP.
-L'émetteur commence alors à générer les futures images en prenant en compte cette nouvelle ZOI et renvoie aussitôt sur le canal TCP le numéro de la frame à partir de laquelle cette nouvelle ZOI est appliquée.
+Lorsqu'un déplacement de la ZOI est commandé par le récepteur, les nouvelles coordonnées désirées de la ZOI sont alors envoyées à l'émetteur via le canal de contrôle \texttt{TCP}.
+L'émetteur commence alors à générer les futures images en prenant en compte cette nouvelle ZOI et renvoie aussitôt sur le canal \texttt{TCP} le numéro de la frame à partir de laquelle cette nouvelle ZOI est appliquée.
 Côté récepteur, il s'agit donc d'attendre l'arrivée de cette image avant de déplacer les zones selon la nouvelle position de la ZOI.
 
 \bigbreak
-La principale difficulté de cette synchronisation est le comptage des images. En effet, s'il est aisé de connaître le numéro de l'image à l'émission, le nombre d'images reçues peut être inférieur, notamment en cas de perte de paquets lors de la transmission.
-Heureusement, chaque paquet PES transmis est encodé avec le PTS, \textit{Presentation timestamp}, qui indique à quel moment afficher l'image. Cet indicateur est ajouté à la compression et est donc entièrement synchronisé sur l'émetteur.
+La principale difficulté de cette synchronisation est le comptage des images.
+En effet, s'il est aisé de connaître le numéro de l'image à l'émission, le nombre d'images reçues peut être inférieur, notamment en cas de perte de paquets lors de la transmission.
+Heureusement, chaque paquet \texttt{PES} transmis est encodé avec le \texttt{PTS}, \textit{Presentation timestamp}, qui indique à quel moment afficher l'image. Cet indicateur est ajouté à la compression et est donc entièrement synchronisé sur l'émetteur.
 Comme nous encodons avec un taux d'image constant, nous pouvons alors en déduire le numéro de l'image.
-Sur l'application Android, MediaCodec nous fournit cette information à la mise à jour de la surface.
-En revanche, sur le réception Linux qui reçoit simplement les octets correspondant aux images RAW, il n'y a pas de métadonnées transmises.
-Nous utilisons alors le module \texttt{showinfo} de FFmpeg qui écrit sur la sortie standard les informations de chaque image. La sortie est redirigée sur une entrée de notre récepteur qui connaît donc le numéro de frame en cours.
+Sur l'application Android, \texttt{MediaCodec} nous fournit cette information à la mise à jour de la surface.
+En revanche, sur le récepteur Linux qui reçoit simplement les octets correspondant aux images RAW, il n'y a pas de métadonnées transmises.
+Nous utilisons alors le module \texttt{showinfo} de \texttt{FFmpeg} qui écrit sur la sortie standard les informations de chaque image. La sortie est redirigée sur une entrée de notre récepteur qui connaît donc le numéro de frame en cours, numéro cohérent avec l'émetteur : la synchronisation peut s'effectuer.
+
+\bigbreak
+L'un des risques d'une erreur de synchronisation est un déplacement erroné.
+Si l'on déplace les zones selon un plan de déplacement qui n'est plus le bon, l'image résultante n'est pas regardable.
 
 
 \section{Résultats}
@@ -667,7 +677,7 @@ Ainsi, le spectateur peut voir les deux résultats en même temps et facilement 
 \end{figure}
 
 \bigbreak
-Nous réalisons le test par des personnes extérieures au projet en leur demandant simplement laquelle des deux parties de la vidéo leur semble de meilleure qualité.
+Nous faisons réaliser le test par des personnes extérieures au projet en leur demandant simplement laquelle des deux parties de la vidéo leur semble de meilleure qualité.
 L'arrêt sur image et le retour en arrière sont autorisés.
 Nos deux testeurs ont conclu à une meilleure qualité de la moitié de la vidéo correspondant à notre flux préalablement traité.
 
@@ -697,7 +707,7 @@ Sur une vidéo de 15 secondes, nous comparons chaque seconde les deux flux compr
 
 \bigbreak
 L'algorithme utilisé est appelé \textit{Perceptual hash} et consiste à générer une somme de contrôle pour chacune des images.
-Contrairement aux sommes de contrôle classiques, celles-ci peuvent être comparées : elles sont en effet générées à partir d'une transformée en cosinus discrète de l'image en niveau de gris, puis en gardant que les fréquences les plus importantes.
+Contrairement aux sommes de contrôle classiques, celles-ci peuvent être comparées : elles sont en effet générées à partir d'une transformée en cosinus discrète de l'image en niveau de gris, puis en ne gardant que les fréquences les plus importantes.
 
 \bigbreak
 Les résultats sur notre essai sont les suivants :
@@ -711,8 +721,8 @@ Les résultats sur notre essai sont les suivants :
 \end{figure}
 
 \bigbreak
-La période de 4 à 9 secondes correspond à celle dans laquelle il y a le plus de mouvement.
-C'est en effet sur ces transitions rapides que notre traitement spécifique prend son sens lorsque la vidéo est encodée à débit constant.
+La période de 4 à 9 secondes correspond à celle dans laquelle il y a le plus de mouvements.
+C'est en effet sur ces transitions rapides que notre traitement spécifique prend son sens lorsque la vidéo est encodée à débit constant, particulièrement avec un faible débit.
 
 
 \section{Conclusion}
