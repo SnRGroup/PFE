@@ -76,7 +76,7 @@ Nous ne pouvons pas réutiliser ce concept car nous n'avons qu'une seule caméra
 Cela nous a tout de même confortés dans l'idée d'encoder une vidéo sphérique avec une qualité dynamique, mais à l'intérieur d'une même image.
 
 \bigbreak
-Enfin, l'article de Aditya Mavlankar et Bernd Girod\ref{REF3} explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
+	Enfin, l'article de Aditya Mavlankar et Bernd Girod\ref{REF3} explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
 L’idée ressemble à ce que nous voulons faire, mais les recherches se portent sur l’optimisation de l’encodage pour du broadcast ; comment éviter d’encoder le flux de haute qualité pour chaque téléspectateur.
 Or, notre projet fonctionne dans un modèle mono-utilisateur, il sera donc plus simple et plus efficace pour notre modèle d’encoder le flux entier en prenant directement en compte la zone d'intérêt de l'utilisateur.
 Aussi, cet article cite les mécanismes FMO et ASO du standard de compression vidéo H.264 qui permettent respectivement d’avoir un débit différent pour chaque bloc de l'image et de prioriser la qualité des zones de l’image.
@@ -88,6 +88,68 @@ Cette recherche nous aura tout de même permis d'avoir un bon aperçu des techni
 
 
 \section{Architecture générale}
+Notre solution s'articule autour d'un émetteur (un Raspberry Pi 3) et de deux récepteur (un smartphone Android et un ordinateur sous Linux).
+Pour rappel, notre objectif n'est pas de tout réimplementer mais d'utiliser des briques logicielles dédiées au streaming vidéo.
+
+\subsection{Canaux de communications}
+L'émetteur est le récepteur communiquent via un réseau Wi-Fi créé à partir d'un routeur tierce.
+Il y a deux sockets qui relient les deux équipements :
+
+\bigbreak
+\begin{itemize}
+\item{Socket UDP : le flux vidéo envoyé depuis l'émetteur vers le récepteur}
+\item{Socket TCP : le canal de contrôle qui permet au récepteur de déplacer la zone d'intérêt}
+\end{itemize}
+
+\subsection{L'émetteur}
+L'émetteur est un Raspberry Pi 3 sur lequel est connecté une caméra grand angle.
+Pour récupérer le flux RAW de la caméra, nous utilisons une première instance de FFmpeg (un logiciel open source pour les flux vidéos).
+Ce flux RAW est redirigé vers notre programme, écrit en C, qui va se charger de traiter le flux vidéo (en détériorant les parties de l'image qui n'intéressent pas l'utilisateur).
+Ce flux traité est dirigé vers une deuxième instance de FFmpeg, qui va encoder le flux RAW en un flux H.264 est l'envoyer en UDP au récepteur.
+Par ailleurs, c'est le programme écrit en C qui fait office de serveur TCP afin de recevoir les demandes de déplacement de la zone d'intérêt.
+
+\bigbreak
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.35]{images/schema_emetteur.png}
+\end{center}
+\caption{Schéma de l'émetteur}
+\label{}
+\end{figure}
+\bigbreak
+
+\subsection{Récepteur Android}
+Notre premier récepeteur est une application Android fonctionnant dans un smartphone qui se trouve dans un casque de réalité virtuelle.
+L'application commence par récupérer le flux UDP d'où elle extrait le flux vidéo H.264.
+Ce flux est décompréssé par le décodeur d'Android qui s'appelle MediaCodec.
+Le flux décodé est alors traité par notre application pour lui redonner son aspect initial, puis il est redirigé vers une surface pour être affiché à l'écran.
+Par ailleurs, l'application possède un client TCP pour le canal de contrôle.
+
+\bigbreak
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.35]{images/schema_recepteur_android.png}
+\end{center}
+\caption{Schéma du récepteur Android}
+\label{}
+\end{figure}
+\bigbreak
+
+\subsection{Récepteur ordinateur}
+Nous deuxième récepteur fonctionne sur un ordianteur sous Linux, qui affiche la vidéo grand angle et permet de déplacer (via le clavier) la zone d'intérêt.
+Pour fonctionner, il récupère le flux H.264 via une instance de FFmpeg qui décompresse la vidéo.
+Le flux RAW est redirigé vers notre programme écrit en C qui traite la vidéo, afin de lui redonner son aspect initial, et l'affiche dans une fenêtre.
+De plus, le programme possède un client TCP pour le canal de contrôle.
+
+\bigbreak
+\begin{figure}[H]
+\begin{center}
+\includegraphics[scale=0.35]{images/schema_recepteur_linux.png}
+\end{center}
+\caption{Schéma du récepteur Android}
+\label{}
+\end{figure}
+\bigbreak
 
 \section{Détails d'implémentation}
 
