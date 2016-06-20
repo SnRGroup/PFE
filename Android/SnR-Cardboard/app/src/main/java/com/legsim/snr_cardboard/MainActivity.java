@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.Calendar;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
@@ -148,6 +149,12 @@ public class MainActivity
     private final static int HEIGTH = 720;
     private final static int ZOIW = 640;
     private final static int ZOIH = 360;
+
+    private long headXave;
+    private long headYave;
+    private int headCount;
+    private long headLastTime;
+    private final static long HEAD_DELAY = 1000;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -315,16 +322,38 @@ public class MainActivity
         if (newZoiY > ZOIH){
             newZoiY = ZOIH;
         }
+        Log.d("newZoi", newZoiX + ";" + newZoiY);
 
-        int zoi[] = this.videoWorker.getZoi();
-        boolean newZoi = (Math.abs(zoi[0] - newZoiX) > 100) || (Math.abs(zoi[1] - newZoiY) > 100)
-                ? true : false;
+        headCount++;
+        headXave += newZoiX;
+        headYave += newZoiY;
 
-        Log.d("newZoi", newZoiX + ";" + newZoiY + " - " + newZoi);
+        long now = Calendar.getInstance().getTimeInMillis();
+        if (now - headLastTime > HEAD_DELAY){
+            if (headCount != 0){
+                headYave /= headCount;
+                headXave /= headCount;
+            }
+            //Log.d("headAve", headYave + ";" + headXave);
 
-        if (newZoi){
-            this.videoWorker.updateZoi((int)newZoiX, (int)newZoiY);
+            if ((Math.abs(newZoiX - headXave) < 50) && (Math.abs(newZoiY - headYave) < 50)) {
+                Log.d("headAve", "ok");
+                int zoi[] = this.videoWorker.getZoi();
+                boolean newZoi = (Math.abs(zoi[0] - newZoiX) > 25) || (Math.abs(zoi[1] - newZoiY) > 25)
+                        ? true : false;
+
+                if (newZoi) {
+                    this.videoWorker.updateZoi((int) newZoiX, (int) newZoiY);
+                    Log.d("updateZoi", newZoiX + ";" + newZoiY);
+                }
+            }
+
+            headCount = 0;
+            headLastTime = now;
+            headXave = 0;
+            headYave = 0;
         }
+
 
         //Log.d((String)"Posi", (String)("" + a + ";" + b));
         //Log.d((String)"Posi", (String)("" + (a *= 2.0) + ";" + (b *= 2.0)));
