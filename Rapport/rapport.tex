@@ -838,7 +838,18 @@ Les résultats sur notre essai sont les suivants :
 La période de 4 à 9 secondes correspond à celle dans laquelle il y a le plus de mouvements.
 C'est en effet sur ces transitions rapides que notre traitement spécifique prend son sens lorsque la vidéo est encodée à débit constant, particulièrement avec un faible débit.
 
-
 \section{Conclusion}
+À travers notre projet de fin d'études, nous avons pu faire l'étude et la réalisation d'une chaîne complète de streaming vidéo.
+Notre solution présente l'avantage d'utiliser des briques logicielles déjà existantes et documentées.
+Elle est donc facilement interopérable, comme le montrent nos différentes implémentations.
+L'implémentation Android présente l'avantage d'illustrer parfaitement notre cas d'usage principal avec le déplacement de la zone d'intérêt selon le placement de l'utilisateur.
+L'implémentation Linux permet quant à elle de comprendre le fonctionnement de la transmission plus en détail ainsi que d'être exploitée dans des cas plus génériques.
+
+\bigbreak
+La technique de prétraitement utilisée est notre réponse à l'absence d'implémentation universelle d'une compression avec un débit variable sur différentes zones d'une même vidéo.
+Si elle n'est pas parfaite et pourrait encore être améliorée davantage, les résultats sont néanmoins satisfaisants dans le cas d'une transmission avec débit contraint.
+
+\bigbreak
+Notre solution constitue donc une bonne base de travail pour la mise en place d'une solution de streaming vidéo point-à-point ainsi que pour son étude.
 
 \end{document}
