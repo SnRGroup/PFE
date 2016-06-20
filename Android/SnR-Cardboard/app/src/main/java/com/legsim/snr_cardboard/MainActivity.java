@@ -136,10 +136,18 @@ public class MainActivity
 
     private HeadTransform head;
 
+    private int lastA = -5;
+    private int lastB = -5;
+
     private double ref = 0.0;
 
     int processingMode;
     int workerMode;
+
+    private final static int WIDTH = 1280;
+    private final static int HEIGTH = 720;
+    private final static int ZOIW = 640;
+    private final static int ZOIH = 360;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -284,6 +292,41 @@ public class MainActivity
         a*=2;
         b*=2;
 
+        double abis = a;
+        double bbis = b;
+        if (abis > 1){
+            abis = 1;
+        }
+        else if (abis < -1){
+            abis = -1;
+        }
+        if (bbis > 1){
+            bbis = 1;
+        }
+        else if (bbis < -1){
+            bbis = -1;
+        }
+
+        double newZoiX = - (abis - 1) * WIDTH / 2;
+        double newZoiY = (1 + bbis) * HEIGTH / 2;
+        if (newZoiX > ZOIW){
+            newZoiX = ZOIW;
+        }
+        if (newZoiY > ZOIH){
+            newZoiY = ZOIH;
+        }
+
+        int zoi[] = this.videoWorker.getZoi();
+        boolean newZoi = (Math.abs(zoi[0] - newZoiX) > 100) || (Math.abs(zoi[1] - newZoiY) > 100)
+                ? true : false;
+
+        Log.d("newZoi", newZoiX + ";" + newZoiY + " - " + newZoi);
+
+        if (newZoi){
+            this.videoWorker.updateZoi((int)newZoiX, (int)newZoiY);
+        }
+
+        //Log.d((String)"Posi", (String)("" + a + ";" + b));
         //Log.d((String)"Posi", (String)("" + (a *= 2.0) + ";" + (b *= 2.0)));
 
         float[] transMatrix = new float[16];
