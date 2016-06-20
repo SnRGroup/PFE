@@ -8,12 +8,60 @@
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{listings}
+\usepackage{etoolbox}
+\usepackage[tocindentauto]{tocstyle}
+\usetocstyle{KOMAlike}
+
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+\renewcommand\thesection{\Roman{section}}
+\renewcommand\thesubsection{\arabic{subsection}.}
+\renewcommand\thesubsubsection{\alph{subsubsection}.}
+
+\preto{\section}{\clearpage}
+
+\title{Étude et réalisation d'une chaîne de streaming vidéo}
+\author{Raffi Tchoboian \& Simon Le Guével}
 
 \begin{document}
 
-Page de garde
+\pagenumbering{gobble}
+\maketitle
+
+\vspace{1cm}
+\begin{center}
+Rapport de PFE
+\end{center}
+
+\vspace{4cm}
+
+\noindent
+Tuteurs :
+
+Khalid IDRISSI, Maître de conférences à l'INSA de Lyon
+
+Philippe ISORCE, Professeur associé à l'INSA de Lyon
+
+\vspace{6cm}
+\begin{center}
+\includegraphics[scale=0.5]{images/insa.png}
+\end{center}
 
 \newpage
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\newpage
+\pagenumbering{arabic}
 
 \section{Présentation du projet}
 
