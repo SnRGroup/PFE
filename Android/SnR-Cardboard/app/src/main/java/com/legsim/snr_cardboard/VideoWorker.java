@@ -10,5 +10,6 @@ public interface VideoWorker {
     void start();
     void finish();
     int[] getZoi();
+    int[] getNextZoi();
     void updateZoi(int x, int y);
 }

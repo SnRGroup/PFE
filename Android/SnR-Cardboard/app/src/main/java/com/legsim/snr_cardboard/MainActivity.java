@@ -28,6 +28,7 @@ import com.google.vrtoolkit.cardboard.Eye;
 import com.google.vrtoolkit.cardboard.HeadTransform;
 import com.google.vrtoolkit.cardboard.Viewport;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -84,8 +85,8 @@ public class MainActivity
 
 
     // position de la ROI
-    private float X = 200f;
-    private float Y = 200f;
+    private float X = 0;
+    private float Y = 0;
 
     // dimension video recue
     private float L = 640f;
@@ -137,8 +138,10 @@ public class MainActivity
 
     private HeadTransform head;
 
-    private int lastA = -5;
-    private int lastB = -5;
+    private int[] currentZoi = {0, 0};
+
+    private double transA;
+    private double transB;
 
     private double ref = 0.0;
 
@@ -150,11 +153,15 @@ public class MainActivity
     private final static int ZOIW = 640;
     private final static int ZOIH = 360;
 
+    /*
     private long headXave;
     private long headYave;
     private int headCount;
     private long headLastTime;
     private final static long HEAD_DELAY = 1000;
+    */
+
+    private HeadHistory headHistory;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -206,6 +213,8 @@ public class MainActivity
 
         Matrix.setIdentityM(this.mSTMatrix, 0);
 
+        headHistory = new HeadHistory();
+
         if (getWorkerMode(getApplicationContext()) == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
             this.videoWorker = new VideoWorkerNetwork(this);
         }
@@ -221,11 +230,124 @@ public class MainActivity
                 this.mSurface.updateTexImage();
                 this.mSurface.getTransformMatrix(this.mSTMatrix);
                 this.updateSurface = false;
-
+                currentZoi = videoWorker.getZoi();
             }
         }
 
         this.head = headTransform;
+
+
+        float[] euler = new float[16];
+        this.head.getEulerAngles(euler, 0);
+        //Log.d((String)"Euler", (String)("" + euler[0] + ";" + euler[1] + ";" + euler[2]));
+
+        double cur = euler[1];
+        if (this.ref == 0.0) {
+            Log.d((String) "REF", (String) "init");
+            this.ref = cur;
+        }
+
+        double a = cur - this.ref;
+        //Log.d((String)"A", (String)("" + a + ""));
+        if (a < -Math.PI) {
+            a = 2 * Math.PI + a;
+        } else if (a > Math.PI) {
+            a -= 2 * Math.PI;
+        }
+
+        double b = (-euler[0]) / 1.57f;
+
+        a*=2;
+        b*=2;
+
+        transA = a;
+        transB = b;
+
+        //Log.d("a,b",a+";"+b);
+
+        double abis = a;
+        double bbis = b;
+
+        if (abis > 1){
+
+            abis = 1;
+        }
+        else if (abis < -1){
+            abis = -1;
+        }
+        if (bbis > 1){
+            bbis = 1;
+        }
+        else if (bbis < -1){
+            bbis = -1;
+        }
+
+
+        double newZoiX = (1- abis) * (WIDTH / 2 - ZOIW/2);
+        double newZoiY = (1 + bbis) * (HEIGTH / 2 - ZOIH/2);
+        if (newZoiX < 0) newZoiX = 0;
+        if (newZoiX > ZOIW){
+            newZoiX = ZOIW;
+        }
+        if (newZoiY < 0) newZoiY = 0;
+        if (newZoiY > ZOIH){
+            newZoiY = ZOIH;
+        }
+        //Log.d("newZoi", Math.round(newZoiX) + ";" + Math.round(newZoiY));
+
+        headHistory.addPosition((int)Math.round(newZoiX),(int)Math.round(newZoiY));
+
+        if (headHistory.isStable()) { // Tête stable
+            int[] average = headHistory.getAverage();
+            int nextZoi[] = this.videoWorker.getNextZoi();
+            if (Math.abs(average[0] - nextZoi[0]) >= 40 || Math.abs(average[1] - nextZoi[1]) >= 40) { // ZOI trop éloignée de la position
+                Log.d("HeadPosition","Updating to "+average[0]+";"+average[1]);
+                videoWorker.updateZoi(average[0], average[1]);
+            }
+        }
+
+        //Log.d("HeadAverage",""+headHistory.getAverage()[0]+";"+headHistory.getAverage()[1]+";"+headHistory.isStable());
+        //Log.d("HeadStable",""+headHistory.isStable());
+
+
+        /*
+        headCount++;
+        headXave += newZoiX;
+        headYave += newZoiY;
+
+        long now = Calendar.getInstance().getTimeInMillis();
+        if (now - headLastTime > HEAD_DELAY){
+            if (headCount != 0){
+                headYave /= headCount;
+                headXave /= headCount;
+            }
+            //Log.d("headAve", headYave + ";" + headXave);
+
+            if ((Math.abs(newZoiX - headXave) < 50) && (Math.abs(newZoiY - headYave) < 50)) {
+                Log.d("headAve", "ok");
+                int zoi[] = this.videoWorker.getZoi();
+                boolean newZoi = (Math.abs(zoi[0] - newZoiX) > 25) || (Math.abs(zoi[1] - newZoiY) > 25)
+                        ? true : false;
+
+                if (newZoi) {
+                    this.videoWorker.updateZoi((int) newZoiX, (int) newZoiY);
+                    Log.d("updateZoi", newZoiX + ";" + newZoiY);
+                }
+            }
+
+            headCount = 0;
+            headLastTime = now;
+            headXave = 0;
+            headYave = 0;
+        }
+        */
+
+
+
+
+        //Log.d((String)"Posi", (String)("" + a + ";" + b));
+        //Log.d((String)"Posi", (String)("" + (a *= 2.0) + ";" + (b *= 2.0)));
+
     }
 
     public void onDrawEye(Eye eye) {
@@ -233,8 +355,9 @@ public class MainActivity
         float textureVertices[];
         if (processingMode == MainActivity.PROCESSING_MODE_WITH){
             if (workerMode == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
-                squareCoords = getSquareCoords_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
-                textureVertices = getTextureVertices_WITH_PROCESSING(videoWorker.getZoi()[0], videoWorker.getZoi()[1], L, H);
+                int[] zoi = currentZoi;
+                squareCoords = getSquareCoords_WITH_PROCESSING(zoi[0], zoi[1], L, H);
+                textureVertices = getTextureVertices_WITH_PROCESSING(zoi[0], zoi[1], L, H);
             }
             else {  // video test
                 squareCoords = getSquareCoords_WITH_PROCESSING(200, 200, L, H);
@@ -276,92 +399,14 @@ public class MainActivity
         GLES20.glEnableVertexAttribArray(maTextureHandle);
         GLES20.glVertexAttribPointer(maTextureHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
 
-        float[] euler = new float[16];
-        this.head.getEulerAngles(euler, 0);
-        //Log.d((String)"Euler", (String)("" + euler[0] + ";" + euler[1] + ";" + euler[2]));
-
-        double cur = euler[1];
-        if (this.ref == 0.0) {
-            Log.d((String) "REF", (String) "init");
-            this.ref = cur;
-        }
-
-        double a = cur - this.ref;
-        //Log.d((String)"A", (String)("" + a + ""));
-        if (a < -Math.PI) {
-            a = 2 * Math.PI + a;
-        } else if (a > Math.PI) {
-            a -= 2 * Math.PI;
-        }
-
-        double b = (-euler[0]) / 1.57f;
-
-        a*=2;
-        b*=2;
-
-        double abis = a;
-        double bbis = b;
-        if (abis > 1){
-            abis = 1;
-        }
-        else if (abis < -1){
-            abis = -1;
-        }
-        if (bbis > 1){
-            bbis = 1;
-        }
-        else if (bbis < -1){
-            bbis = -1;
-        }
-
-        double newZoiX = - (abis - 1) * WIDTH / 2;
-        double newZoiY = (1 + bbis) * HEIGTH / 2;
-        if (newZoiX > ZOIW){
-            newZoiX = ZOIW;
-        }
-        if (newZoiY > ZOIH){
-            newZoiY = ZOIH;
-        }
-        Log.d("newZoi", newZoiX + ";" + newZoiY);
-
-        headCount++;
-        headXave += newZoiX;
-        headYave += newZoiY;
-
-        long now = Calendar.getInstance().getTimeInMillis();
-        if (now - headLastTime > HEAD_DELAY){
-            if (headCount != 0){
-                headYave /= headCount;
-                headXave /= headCount;
-            }
-            //Log.d("headAve", headYave + ";" + headXave);
-
-            if ((Math.abs(newZoiX - headXave) < 50) && (Math.abs(newZoiY - headYave) < 50)) {
-                Log.d("headAve", "ok");
-                int zoi[] = this.videoWorker.getZoi();
-                boolean newZoi = (Math.abs(zoi[0] - newZoiX) > 25) || (Math.abs(zoi[1] - newZoiY) > 25)
-                        ? true : false;
-
-                if (newZoi) {
-                    this.videoWorker.updateZoi((int) newZoiX, (int) newZoiY);
-                    Log.d("updateZoi", newZoiX + ";" + newZoiY);
-                }
-            }
-
-            headCount = 0;
-            headLastTime = now;
-            headXave = 0;
-            headYave = 0;
-        }
 
 
-        //Log.d((String)"Posi", (String)("" + a + ";" + b));
-        //Log.d((String)"Posi", (String)("" + (a *= 2.0) + ";" + (b *= 2.0)));
+
 
         float[] transMatrix = new float[16];
         Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.setIdentityM(transMatrix, 0);
-        Matrix.translateM(transMatrix, 0, (float) a, (float) b, 0.0f);
+        Matrix.translateM(transMatrix, 0, (float) transA, (float) transB, 0.0f);
         Matrix.multiplyMM(transMatrix, 0, mMVPMatrix, 0, transMatrix, 0);
         GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, transMatrix, 0);
         GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
@@ -516,7 +561,7 @@ public class MainActivity
     }
 
     public void onCardboardTrigger() {
-        videoWorker.updateZoi((int)(Math.random()*200),(int)(Math.random()*200));
+        //videoWorker.updateZoi((int)(Math.random()*200),(int)(Math.random()*200));
     }
 
     protected void onImageBtnSettings(View view){

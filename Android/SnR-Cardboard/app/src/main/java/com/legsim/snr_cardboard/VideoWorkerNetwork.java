@@ -26,18 +26,18 @@ public class VideoWorkerNetwork implements VideoWorker {
     private LinkedList<PESPacket> PESlist;
     private DatagramSocket clientsocketUDP;
 
-    private Thread threadControl;
+    private Thread threadControlRead;
     private Socket clientsocketTCP;
     DataOutputStream outToServer;
     BufferedReader inFromServer;
 
     public HashMap<Integer, int[]> zoiPos;
 
+    private boolean nextZoiPending = false;
     private int nextZoiX;
     private int nextZoiY;
 
-    public int currentZoiX;
-    public int currentZoiY;
+    public int[] currentZoi = {0,0};
 
     private MainActivity mAct;
 
@@ -65,7 +65,7 @@ public class VideoWorkerNetwork implements VideoWorker {
         zoiPos = new HashMap<>();
 
         threadVideo = new Thread(new VideoReceiverRunnable());
-        threadControl = new Thread(new ControlRunnable());
+        threadControlRead = new Thread(new ControlRunnableRead());
     }
 
     public void configure(Surface surface) {
@@ -83,7 +83,7 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     public void start() {
         threadVideo.start();
-        threadControl.start();
+        threadControlRead.start();
     }
 
     public void finish() {
@@ -92,13 +92,25 @@ public class VideoWorkerNetwork implements VideoWorker {
 
     @Override
     public int[] getZoi() {
-        int[] ret = { currentZoiX, currentZoiY };
+        int[] ret = currentZoi;
+        return ret;
+    }
+
+    @Override
+    public int[] getNextZoi() {
+        int[] ret = {nextZoiX, nextZoiY};
         return ret;
     }
 
     public void updateZoi(int x, int y) {
         nextZoiX = x;
         nextZoiY = y;
+        try {
+            outToServer.write((nextZoiX + "," + nextZoiY + "\n").getBytes());
+            outToServer.flush();
+        } catch (IOException e) {
+
+        }
     }
 
     public class VideoReceiverRunnable implements Runnable {
@@ -146,25 +158,27 @@ public class VideoWorkerNetwork implements VideoWorker {
 
                     imgCount -= firstImage;
 
-                    Log.d("IMGCOUNT", "" + imgCount);
+                    Log.d("FRAME", "" + imgCount);
 
                     int pos[] = null;
                     for (int i = lastImage+1; i <= imgCount; i++) {
-                        Log.d("Checking",i+"");
+                        //Log.d("Checking",i+"");
                         int[] pos2 = zoiPos.get(i);
                         if (pos2 != null) pos=pos2;
                     }
 
+
                     if (pos != null) {
                         Log.d("New position",pos[0]+";"+pos[1]);
-                        currentZoiX = pos[0];
-                        currentZoiY = pos[1];
+                        currentZoi = pos;
                     }
 
                     lastImage = imgCount;
 
 
                     codec.releaseOutputBuffer(index, info.presentationTimeUs);
+
+
 
                 }
 
@@ -284,7 +298,7 @@ public class VideoWorkerNetwork implements VideoWorker {
         }
     }
 
-    public class ControlRunnable implements Runnable {
+    public class ControlRunnableRead implements Runnable {
 
         @Override
         public void run() {
@@ -293,27 +307,21 @@ public class VideoWorkerNetwork implements VideoWorker {
                 outToServer = new DataOutputStream((clientsocketTCP.getOutputStream()));
                 inFromServer = new BufferedReader(new InputStreamReader(clientsocketTCP.getInputStream()));
 
-
                 while (!stop) {
 
-                    if (nextZoiX != -1) {
-                        outToServer.write((nextZoiX+","+nextZoiY+"\n").getBytes());
-                        outToServer.flush();
-                        nextZoiX = -1;
-                    }
 
                     if (inFromServer.ready()) {
                         String s = inFromServer.readLine();
                         Log.d("TCP", s);
                         String args[] = s.split(";");
-                        String cmd = args[0];
+                        String cmd = args[0].trim();
                         if (cmd.equals("POS")) {
                             int imgCount = Integer.parseInt(args[1]);
                             int newX = Integer.parseInt(args[2]);
                             int newY = Integer.parseInt(args[3]);
                             Log.d("POS", imgCount + " - " + newX + " - " + newY);
 
-                            zoiPos.put(imgCount+1, new int[]{newX, newY});
+                            zoiPos.put(imgCount, new int[]{newX, newY});
 
                         }
                     }
@@ -327,6 +335,9 @@ public class VideoWorkerNetwork implements VideoWorker {
             }
         }
     }
+
+
+
 
 
 }
