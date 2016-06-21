@@ -735,10 +735,10 @@ public class MainActivity
         for(int i = 0; i < res.length; i++){
             float facteur;
             if (i <= 15) {  // zone 1 ou 2
-                facteur = 6;
+                facteur = 6; //1
             }
             else {
-                facteur = 3;
+                facteur = 3; //1
             }
 
             if ((i % 8 == 0) || (i % 8 == 2)) {
