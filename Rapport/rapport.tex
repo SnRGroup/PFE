@@ -689,7 +689,7 @@ Enfin, en appuyant sur la touche \texttt{P}, l'utilisateur peut passer du mode s
 \bigbreak
 L'intérêt principal de la bibliothèque SDL est de pouvoir afficher le flux vidéo.
 Pour cela, le programme crée une fenêtre graphique SDL d'une résolution de \texttt{1280x720} pixels.
-Ensuite, une boucle récupère une les images décompressées par \texttt{FFmpeg}).
+Ensuite, une boucle récupère une à une les images décompressées par \texttt{FFmpeg}).
 Si le programme fonctionne avec traitement, alors nous effectuons les modifications sur le flux RAW (replacer les zones à leurs positions initiales et sur-échantillonner celles qui ont été sous-échantillonnées à l'émission). 
 Afin de permettre d'apprécier la différence de qualité entre la ZOI et les autres zones, nous encadrons la ZOI par une bordure noire dans ce même traitement.
 Dans tous les cas, le programme termine par l'affichage de l'image qui se trouve actuellement en mémoire.
