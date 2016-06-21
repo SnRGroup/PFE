@@ -5,21 +5,16 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Parcel;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;
@@ -28,12 +23,10 @@ import com.google.vrtoolkit.cardboard.Eye;
 import com.google.vrtoolkit.cardboard.HeadTransform;
 import com.google.vrtoolkit.cardboard.Viewport;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
-import java.util.Calendar;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
@@ -50,7 +43,7 @@ public class MainActivity
     final static int VIDEO_WORKER_MODE_NETWORK = 1;
     final static int VIDEO_WORKER_MODE_LOCAL = 0;
 
-    final static String PROCESSING_MODE= "Processing mode";
+    final static String PROCESSING_MODE = "Processing mode";
     final static int PROCESSING_MODE_WITH = 1;
     final static int PROCESSING_MODE_WITHOUT = 0;
 
@@ -62,7 +55,7 @@ public class MainActivity
     private FloatBuffer vertexBuffer, textureVerticesBuffer;
     private ShortBuffer drawListBuffer;
 
-    private short drawOrder_WITHOUT_PROCESSING[] = { 0, 1, 2, 0, 2, 3 }; // order to draw vertices
+    private short drawOrder_WITHOUT_PROCESSING[] = {0, 1, 2, 0, 2, 3}; // order to draw vertices
 
     // number of coordinates per vertex in this array
     private static final int COORDS_PER_VERTEX_WITHOUT_PROCESSING = 2;
@@ -70,10 +63,10 @@ public class MainActivity
     private final int vertexStride_WITHOUT_PROCESSING = COORDS_PER_VERTEX_WITHOUT_PROCESSING * 4; // 4 bytes per vertex
 
     private float squareCoords_WITHOUT_PROCESSING[] = {
-            -2.0f,  2.0f,
-            -2.0f,  -2.0f,
-            2.0f,   -2.0f,
-            2.0f,   2.0f,
+            -2.0f, 2.0f,
+            -2.0f, -2.0f,
+            2.0f, -2.0f,
+            2.0f, 2.0f,
     };
 
     private float textureVertices_WITHOUT_PROCESSING[] = {
@@ -95,20 +88,20 @@ public class MainActivity
     // order to draw vertices
     private short drawOrder_WITH_PROCESSING[] = {
             // zone 1
-            0,  1,   2,
-            0,  2,   3,
+            0, 1, 2,
+            0, 2, 3,
             // zone 2
-            4,  5,   6,
-            4,  6,   7,
+            4, 5, 6,
+            4, 6, 7,
             // zone 3
-            8,  9,   10,
-            8,  10,  11,
+            8, 9, 10,
+            8, 10, 11,
             // ROI
-            12, 13,  14,
-            12, 14,  15,
+            12, 13, 14,
+            12, 14, 15,
             // zone 4,
-            16, 17,  18,
-            16, 18,  19
+            16, 17, 18,
+            16, 18, 19
     };
 
     // number of coordinates per vertex in this array
@@ -180,12 +173,11 @@ public class MainActivity
         float squareCoords[];
         short drawOrder[];
         float textureVertices[];
-        if (processingMode == MainActivity.PROCESSING_MODE_WITH){
+        if (processingMode == MainActivity.PROCESSING_MODE_WITH) {
             squareCoords = getSquareCoords_WITH_PROCESSING(X, Y, L, H);
             drawOrder = drawOrder_WITH_PROCESSING;
             textureVertices = getTextureVertices_WITH_PROCESSING(X, Y, L, H);
-        }
-        else{
+        } else {
             squareCoords = squareCoords_WITHOUT_PROCESSING;
             drawOrder = drawOrder_WITHOUT_PROCESSING;
             textureVertices = textureVertices_WITHOUT_PROCESSING;
@@ -217,8 +209,7 @@ public class MainActivity
 
         if (getWorkerMode(getApplicationContext()) == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
             this.videoWorker = new VideoWorkerNetwork(this);
-        }
-        else{
+        } else {
             this.videoWorker = new VideoWorkerLocal(getApplicationContext());
         }
     }
@@ -257,8 +248,8 @@ public class MainActivity
 
         double b = (-euler[0]) / 1.57f;
 
-        a*=2;
-        b*=2;
+        a *= 2;
+        b *= 2;
 
         transA = a;
         transB = b;
@@ -268,40 +259,38 @@ public class MainActivity
         double abis = a;
         double bbis = b;
 
-        if (abis > 1){
+        if (abis > 1) {
 
             abis = 1;
-        }
-        else if (abis < -1){
+        } else if (abis < -1) {
             abis = -1;
         }
-        if (bbis > 1){
+        if (bbis > 1) {
             bbis = 1;
-        }
-        else if (bbis < -1){
+        } else if (bbis < -1) {
             bbis = -1;
         }
 
 
-        double newZoiX = (1- abis) * (WIDTH / 2 - ZOIW/2);
-        double newZoiY = (1 + bbis) * (HEIGTH / 2 - ZOIH/2);
+        double newZoiX = (1 - abis) * (WIDTH / 2 - ZOIW / 2);
+        double newZoiY = (1 + bbis) * (HEIGTH / 2 - ZOIH / 2);
         if (newZoiX < 0) newZoiX = 0;
-        if (newZoiX > ZOIW){
+        if (newZoiX > ZOIW) {
             newZoiX = ZOIW;
         }
         if (newZoiY < 0) newZoiY = 0;
-        if (newZoiY > ZOIH){
+        if (newZoiY > ZOIH) {
             newZoiY = ZOIH;
         }
         //Log.d("newZoi", Math.round(newZoiX) + ";" + Math.round(newZoiY));
 
-        headHistory.addPosition((int)Math.round(newZoiX),(int)Math.round(newZoiY));
+        headHistory.addPosition((int) Math.round(newZoiX), (int) Math.round(newZoiY));
 
         if (headHistory.isStable()) { // Tête stable
             int[] average = headHistory.getAverage();
             int nextZoi[] = this.videoWorker.getNextZoi();
             if (Math.abs(average[0] - nextZoi[0]) >= 40 || Math.abs(average[1] - nextZoi[1]) >= 40) { // ZOI trop éloignée de la position
-                Log.d("HeadPosition","Updating to "+average[0]+";"+average[1]);
+                Log.d("HeadPosition", "Updating to " + average[0] + ";" + average[1]);
                 videoWorker.updateZoi(average[0], average[1]);
             }
         }
@@ -343,8 +332,6 @@ public class MainActivity
         */
 
 
-
-
         //Log.d((String)"Posi", (String)("" + a + ";" + b));
         //Log.d((String)"Posi", (String)("" + (a *= 2.0) + ";" + (b *= 2.0)));
 
@@ -353,18 +340,16 @@ public class MainActivity
     public void onDrawEye(Eye eye) {
         float squareCoords[];
         float textureVertices[];
-        if (processingMode == MainActivity.PROCESSING_MODE_WITH){
+        if (processingMode == MainActivity.PROCESSING_MODE_WITH) {
             if (workerMode == MainActivity.VIDEO_WORKER_MODE_NETWORK) {
                 int[] zoi = currentZoi;
                 squareCoords = getSquareCoords_WITH_PROCESSING(zoi[0], zoi[1], L, H);
                 textureVertices = getTextureVertices_WITH_PROCESSING(zoi[0], zoi[1], L, H);
-            }
-            else {  // video test
+            } else {  // video test
                 squareCoords = getSquareCoords_WITH_PROCESSING(200, 200, L, H);
                 textureVertices = getTextureVertices_WITH_PROCESSING(200, 200, L, H);
             }
-        }
-        else{
+        } else {
             squareCoords = squareCoords_WITHOUT_PROCESSING;
             textureVertices = textureVertices_WITHOUT_PROCESSING;
         }
@@ -387,8 +372,6 @@ public class MainActivity
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mTextureID);
 
 
-
-
         int coords_per_vertex = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 COORDS_PER_VERTEX_WITH_PROCESSING :
                 COORDS_PER_VERTEX_WITHOUT_PROCESSING;
@@ -400,16 +383,13 @@ public class MainActivity
         GLES20.glVertexAttribPointer(maTextureHandle, coords_per_vertex, GLES20.GL_FLOAT, false, vertexStride, textureVerticesBuffer);
 
 
-
-
-
         float[] transMatrix = new float[16];
         Matrix.setIdentityM(mMVPMatrix, 0);
         Matrix.setIdentityM(transMatrix, 0);
         Matrix.translateM(transMatrix, 0, (float) transA, (float) transB, 0.0f);
         Matrix.multiplyMM(transMatrix, 0, mMVPMatrix, 0, transMatrix, 0);
         GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, transMatrix, 0);
-        GLES20.glUniformMatrix4fv(muSTMatrixHandle,  1,  false,  this.mSTMatrix, 0);
+        GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, this.mSTMatrix, 0);
 
         int drawOrderLength = processingMode == MainActivity.PROCESSING_MODE_WITH ?
                 drawOrder_WITH_PROCESSING.length :
@@ -530,7 +510,7 @@ public class MainActivity
         this.surface = surface;
         videoWorker.configure(surface);
 
-        synchronized(this) {
+        synchronized (this) {
             updateSurface = false;
         }
 
@@ -562,12 +542,18 @@ public class MainActivity
 
     public void onCardboardTrigger() {
         //videoWorker.updateZoi((int)(Math.random()*200),(int)(Math.random()*200));
+        float[] euler = new float[16];
+        this.head.getEulerAngles(euler, 0);
+
+        double cur = euler[1];
+        Log.d((String) "REF", (String) "init");
+        this.ref = cur;
     }
 
-    protected void onImageBtnSettings(View view){
-        final AlertDialog.Builder alertDialog =   new AlertDialog.Builder(MainActivity.this);
+    protected void onImageBtnSettings(View view) {
+        final AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
         alertDialog.setTitle("Settings");
-        LayoutInflater inflater= getLayoutInflater();
+        LayoutInflater inflater = getLayoutInflater();
         final View dialogView = inflater.inflate(R.layout.dialog_settings, null);
         alertDialog.setView(dialogView);
 
@@ -591,7 +577,7 @@ public class MainActivity
         alertDialog.setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 String ip = editIp.getText().toString();
-                if(! ip.isEmpty()){
+                if (!ip.isEmpty()) {
                     setIpPreference(ip);
                 }
                 setWorkerMode(btnNetwork.isChecked() ?
@@ -603,7 +589,7 @@ public class MainActivity
 
                 // restart the app
                 Intent i = getBaseContext().getPackageManager()
-                        .getLaunchIntentForPackage( getBaseContext().getPackageName() );
+                        .getLaunchIntentForPackage(getBaseContext().getPackageName());
                 i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(i);
             }
@@ -612,31 +598,31 @@ public class MainActivity
         alertDialog.show();
     }
 
-    private void setIpPreference(String newIp){
+    private void setIpPreference(String newIp) {
         setSharedPreference(IP_PREFERENCE, newIp);
     }
 
-    public String getIpPreference(){
+    public String getIpPreference() {
         return getSharedPreference(getApplicationContext(), MainActivity.IP_PREFERENCE, MainActivity.IP_DEFAULT);
     }
 
-    private void setWorkerMode(int newMode){
+    private void setWorkerMode(int newMode) {
         setSharedPreference(VIDEO_WORKER_MODE, newMode);
     }
 
-    static int getWorkerMode(Context context){
+    static int getWorkerMode(Context context) {
         return getSharedPreference(context, MainActivity.VIDEO_WORKER_MODE, MainActivity.VIDEO_WORKER_MODE_NETWORK);
     }
 
-    private void setProcessingMode(int newMode){
+    private void setProcessingMode(int newMode) {
         setSharedPreference(PROCESSING_MODE, newMode);
     }
 
-    static int getProcessingMode(Context context){
+    static int getProcessingMode(Context context) {
         return getSharedPreference(context, MainActivity.PROCESSING_MODE, MainActivity.PROCESSING_MODE_WITHOUT);
     }
 
-    private void setSharedPreference(String key, int value){
+    private void setSharedPreference(String key, int value) {
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -644,7 +630,7 @@ public class MainActivity
         editor.commit();
     }
 
-    private void setSharedPreference(String key, String value){
+    private void setSharedPreference(String key, String value) {
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
                 PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -652,45 +638,45 @@ public class MainActivity
         editor.commit();
     }
 
-    private static String getSharedPreference(Context context, String key, String defValue){
+    private static String getSharedPreference(Context context, String key, String defValue) {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 MainActivity.PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
         return sharedPref.getString(key, defValue);
     }
 
-    private static int getSharedPreference(Context context, String key, int defValue){
+    private static int getSharedPreference(Context context, String key, int defValue) {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 MainActivity.PREFERENCE_FILE_NAME, Context.MODE_PRIVATE);
         return sharedPref.getInt(key, defValue);
     }
 
-    private static float[] getSquareCoords_WITH_PROCESSING(float x, float y, float l, float h){
+    private static float[] getSquareCoords_WITH_PROCESSING(float x, float y, float l, float h) {
         float[] res = new float[]{
-            // zone 1
-            -1f, 1f,
-            -1f, -1f,
-            -1f + (x / l), -1f,
-            -1f + (x / l), 1f,
-            // zone 2
-            x / l, 1f,
-            x / l, -1f,
-            1f, -1f,
-            1f, 1f,
-            // zone 3
-            -1f + (x / l), 1f,
-            -1f + (x / l), 1f - (2f * y / h),
-            x / l, 1f - (2f * y / h),
-            x / l, 1f,
-            // ROI
-            -1f + (x / l), 1f - (2f * y / h),
-            -1f + (x / l), -2f * y / h,
-            x / l, -2f * y / h,
-            x / l, 1 - (2f * y / h),
-            // zone 4
-            -1f + (x / l), -2f * y / h,
-            -1f + (x / l), -1f,
-            x / l, -1f,
-            x / l, -2f * y / h
+                // zone 1
+                -1f, 1f,
+                -1f, -1f,
+                -1f + (x / l), -1f,
+                -1f + (x / l), 1f,
+                // zone 2
+                x / l, 1f,
+                x / l, -1f,
+                1f, -1f,
+                1f, 1f,
+                // zone 3
+                -1f + (x / l), 1f,
+                -1f + (x / l), 1f - (2f * y / h),
+                x / l, 1f - (2f * y / h),
+                x / l, 1f,
+                // ROI
+                -1f + (x / l), 1f - (2f * y / h),
+                -1f + (x / l), -2f * y / h,
+                x / l, -2f * y / h,
+                x / l, 1 - (2f * y / h),
+                // zone 4
+                -1f + (x / l), -2f * y / h,
+                -1f + (x / l), -1f,
+                x / l, -1f,
+                x / l, -2f * y / h
         };
 
         // TODO a inclure dans le tab ci-dessus
@@ -701,56 +687,52 @@ public class MainActivity
         return res;
     }
 
-    private static float[] getTextureVertices_WITH_PROCESSING(float x, float y, float l, float h){
-        float[] res = new float[] {
-            // zone 1
-            0f,             1f,
-            0f,             1f / 2f,
-            x / (2f * l),   1f / 2f,
-            x / (2f * l),   1f,
-            // zone 2
-            x / (2f * l),   1f,
-            x / (2f * l),   1f / 2f,
-            1f / 2f,        1f / 2f,
-            1f / 2f,        1f,
-            // zone 3
-            1f / 2f,        1f,
-            1f / 2f,        1f - (y / (2f * h)),
-            1f,             1f - (y / (2f * h)),
-            1f,             1f,
-            // ROI
-            0f,             1f / 2f,
-            0f,             0f,
-            1f,             0f,
-            1f,             1f / 2f,
-            // zone 4
-            1f / 2f,        1- (y /(2f * h)),
-            1f / 2f,        3f / 4f,
-            1f,             3f / 4f,
-            1f,             1- (y /(2f * h))
+    private static float[] getTextureVertices_WITH_PROCESSING(float x, float y, float l, float h) {
+        float[] res = new float[]{
+                // zone 1
+                0f, 1f,
+                0f, 1f / 2f,
+                x / (2f * l), 1f / 2f,
+                x / (2f * l), 1f,
+                // zone 2
+                x / (2f * l), 1f,
+                x / (2f * l), 1f / 2f,
+                1f / 2f, 1f / 2f,
+                1f / 2f, 1f,
+                // zone 3
+                1f / 2f, 1f,
+                1f / 2f, 1f - (y / (2f * h)),
+                1f, 1f - (y / (2f * h)),
+                1f, 1f,
+                // ROI
+                0f, 1f / 2f,
+                0f, 0f,
+                1f, 0f,
+                1f, 1f / 2f,
+                // zone 4
+                1f / 2f, 1 - (y / (2f * h)),
+                1f / 2f, 3f / 4f,
+                1f, 3f / 4f,
+                1f, 1 - (y / (2f * h))
         };
 
         // TODO a inclure dans le tab ci-dessus
         // ajout de marge sur les vertices
-        for(int i = 0; i < res.length; i++){
+        for (int i = 0; i < res.length; i++) {
             float facteur;
             if (i <= 15) {  // zone 1 ou 2
                 facteur = 6; //1
-            }
-            else {
+            } else {
                 facteur = 3; //1
             }
 
             if ((i % 8 == 0) || (i % 8 == 2)) {
                 res[i] += (facteur * VERTICE_MARGE_X);
-            }
-            else if ((i % 8 == 4) || (i % 8 == 6)) {
+            } else if ((i % 8 == 4) || (i % 8 == 6)) {
                 res[i] -= (facteur * VERTICE_MARGE_X);
-            }
-            else if ((i % 8 == 3) || (i % 8 == 5)) {
+            } else if ((i % 8 == 3) || (i % 8 == 5)) {
                 res[i] += (facteur * VERTICE_MARGE_Y);
-            }
-            else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
+            } else {  // =  else if ((i % 8 == 7) || (i % 8 == 1))
                 res[i] -= (facteur * VERTICE_MARGE_Y);
             }
         }
