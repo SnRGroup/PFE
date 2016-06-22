@@ -113,7 +113,7 @@ void *task_network1(void *data) {
 		sscanf(buf,"%d,%d\n",&a, &b);
 		shared->zoiX=a;
 		shared->zoiY=b;
-		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount, shared->zoiX, shared->zoiY);
+		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount+1, shared->zoiX, shared->zoiY);
 		write(shared->socket, buf, strlen(buf));
 		printf("Next ZOI position : %d,%d\n",a,b);
 	}
