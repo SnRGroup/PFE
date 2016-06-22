@@ -1,6 +1,10 @@
+#!/bin/bash
+
+make
+
 if [[ -p ffmpegcontrolfifo ]]; then
 	rm ffmpegcontrolfifo
 fi
 mkfifo ffmpegcontrolfifo
-ffmpeg -nostats -f mpegts -i udp://192.168.1.171:1235 -f rawvideo -vf showinfo -bufsize 0 -pix_fmt yuv420p - 2>ffmpegcontrolfifo |
-./receiver 192.168.1.171
+ffmpeg -nostats -f mpegts -i udp://$1:1235 -f rawvideo -vf showinfo -bufsize 0 -pix_fmt yuv420p - 2>ffmpegcontrolfifo |
+./receiver $1
