@@ -1,9 +1,67 @@
 === README ===
 
+I / Préparation des machines
+
+Paquets :
+*SDL-devel
+*SDL-static
+*ffmpeg
+*mplayer
+
+
+II / Transmission simple chaine FFmpeg tout seul
+
+Commande émission :
+ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0 -bufsize 0 -vcodec libx264 -b:v 2000k -g 10 -pix_fmt yuv420p -preset ultrafast -tune zerolatency -f mpegts udp://IP_RECEPTION:1235
+
+Commande réception :
+mplayer -cache 0 udp://IP_RECEPTION:1235
+
+Paramètres intéressants à changer :
+Émetteur :
+-r 10 : framerate de la caméra, à tester : 5, 25
+-b:v 2000k : débit d'encodage H.264
+-g 10 : Group of Images (Image I toutes les X images, voir Khalid)
+-tune zerolatency : Sans lui, images B et latence supérieure
+
+Récepteur :
+-cache 0 : Cache de réception, valeur à estimer (bon compromis latence/perte = 512)
+
+III / Ajout du crop
+Intérêt : brider le codec à une petite valeur (-b:v 400k) pour voir l'intérêt de transmettre une image plus petite.
+Comparaison à 400k entre l'image entière et l'image cropée au centre (ZOI) :
+ffmpeg -f v4l2 -s 1280x720 -r 10 -i /dev/video0 -bufsize 0 -vcodec libx264 -vf crop=640:360:320:180 -b:v 2000k -g 10 -pix_fmt yuv420p -preset ultrafast -tune zerolatency -f mpegts udp://IP_RECEPTION:1235
+(crop : largeur:hauteur:x:y avec (x,y) point haut gauche)
+
+IV / Utilisation de l'émetteur
+
 --- Emetteur ---
 ./emetteur
 Trouver son IP avec ifconfig
 
-
 --- Recepteur ---
-./recepteur IP (exemple : ./recepteur 192.168.1.171)
+Utiliser un client telnet pour initier la socket TCP de contrôle (port 1234)
+$ telnet IP_EMISSION 1234
+Le flux est lancé en direction du poste de réception (port 1235)...
+
+Toujours mplayer pour lire le flux
+Pour déplacer la ZOI, écrire dans le terminal telnet : "200,100" (sans les guillemets) puis entrée (position X,Y)
+Attention : valeur maximale de la zoi en X : 640 et en Y : 360
+
+V / Utilisation du récepteur
+Fermer socket Mplayer et la socket de contrôle
+Relancer l'émetteur
+
+./recepteur IP_EMISSION
+
+Flèches pour déplacement
+Touche P pour activer ou désactiver le traitement
+
+
+
+---
+
+URL GitHub avec tous les programmes : https://github.com/SnRGroup/PFE
+URL directe du .zip : https://github.com/SnRGroup/PFE/archive/master.zip
+
+Modification du bitrate pour notre émetteur : fichier "consts.h", macro "H264_BITRATE"
