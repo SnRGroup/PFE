@@ -39,9 +39,11 @@
 \vspace{1cm}
 \begin{center}
 Rapport de PFE
+\\
+Département Télécommunications, Services \& Usages
 \end{center}
 
-\vspace{4cm}
+\vspace{3.5cm}
 
 \noindent
 Tuteurs :
@@ -50,10 +52,21 @@ Khalid IDRISSI, Maître de conférences à l'INSA de Lyon
 
 Philippe ISORCE, Professeur associé à l'INSA de Lyon
 
-\vspace{6cm}
+\vspace{5cm}
 \begin{center}
 \includegraphics[scale=0.5]{images/insa.png}
 \end{center}
+
+\newpage
+
+\section*{Remerciements}
+
+Nous remercions nos tuteurs, Khalid IDRISSI et Philippe ISORCE, pour leur aide quant à la mise en place du sujet et à leur suivi sans faille tout au long du projet.
+Nous remercions aussi Razvan STANICA pour sa supervision des PFE ainsi que Julien PONGE et Frédéric LE MOUËL pour l'évaluation de la soutenance orale.
+Merci aussi au jury chargé d'évaluer ce présent rapport.
+
+\bigbreak
+Enfin, un grand merci à l'équipe du département Télécommunications de l'INSA de Lyon pour les enseignements transmis et le matériel mis à notre disposition.
 
 \newpage
 
@@ -68,6 +81,7 @@ Philippe ISORCE, Professeur associé à l'INSA de Lyon
 \subsection{Objectif général}
 L'objectif général de notre projet de fin d'études, dit \textit{PFE}, est d'étudier et de mettre en place une chaîne de transmission vidéo.
 Nous ferons l'étude technique et la réalisation de l'ensemble des étapes : de la station émettrice au récepteur, en passant par les techniques de mise en réseau.
+Notre projet servira alors de base dans le cadre de travaux pratiques de la formation Télécom à l'INSA de Lyon.
 
 \bigbreak
 Nous avons décidé de nous intéresser plus particulièrement à l'amélioration de la qualité d'une zone géographique d'un flux vidéo, au détriment du reste de la vidéo.
@@ -110,13 +124,13 @@ Nous avons sélectionné quelques papiers qui s'intéressent à des techniques s
 
 \bigbreak
 La solution la plus évidente est d'intervenir directement au niveau de l'algorithme de compression.
-L'article de Amir Said et William Pearlman\ref{REF1} décrit comment compresser une image avec un débit variable pour chaque partie de l'image.
+L'article de Amir Said et William Pearlman [1] décrit comment compresser une image avec un débit variable pour chaque partie de l'image.
 
 Cette approche est intéressante mais nous faisons le choix de réutiliser un algorithme de compression, dit \textit{codec}, existant.
 L'algorithme étant notamment déjà intégré dans les terminaux de réception pour effectuer du décodage matériel, il nous est presque impossible d'intervenir à ce niveau.
 
 \bigbreak
-L'article de Engin Kurutepe\ref{REF2} montre comment optimiser l'envoi d'un flux provenant de plusieurs caméras.
+L'article de Engin Kurutepe [2] montre comment optimiser l'envoi d'un flux provenant de plusieurs caméras.
 Pour cela, l'équipement récepteur suit les mouvements de la tête de l'utilisateur afin de savoir quelle zone de l'image l'intéresse le plus.
 Après cela, l'équipement envoie cette information à l'encodageur qui va demander un plus gros débit aux caméras qui filment la zone d'intérêt et un débit plus faible aux autres caméras.
 
@@ -124,7 +138,7 @@ Nous ne pouvons pas réutiliser ce concept car nous n'avons qu'une seule caméra
 Cela nous a tout de même confortés dans l'idée d'encoder une vidéo sphérique avec une qualité dynamique, mais à l'intérieur d'une même image.
 
 \bigbreak
-	Enfin, l'article de Aditya Mavlankar et Bernd Girod\ref{REF3} explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
+	Enfin, l'article de Aditya Mavlankar et Bernd Girod [3] explique comment optimiser l’envoi d’une image basse qualité d’un match de football ainsi qu’une zone précise de haute qualité.
 L’idée ressemble à ce que nous voulons faire, mais les recherches se portent sur l’optimisation de l’encodage pour du broadcast ; comment éviter d’encoder le flux de haute qualité pour chaque téléspectateur.
 Or, notre projet fonctionne dans un modèle mono-utilisateur, il sera donc plus simple et plus efficace pour notre modèle d’encoder le flux entier en prenant directement en compte la zone d'intérêt de l'utilisateur.
 Aussi, cet article cite les mécanismes FMO et ASO du standard de compression vidéo H.264 qui permettent respectivement d’avoir un débit différent pour chaque bloc de l'image et de prioriser la qualité des zones de l’image.
@@ -851,5 +865,23 @@ Si elle n'est pas parfaite et pourrait encore être améliorée davantage, les r
 
 \bigbreak
 Notre solution constitue donc une bonne base de travail pour la mise en place d'une solution de streaming vidéo point-à-point ainsi que pour son étude.
+Les élèves-ingénieurs pourront mettre en place une chaine simple sans utiliser notre traitement puis seront amenés, à travers une transmission à débit contraint, à comprendre l'intérêt d'une solution comme la nôtre.
+
+\section{Bibliographie}
+
+\paragraph{[1]} \og{}A New Fast and Ecient Image Codec Based on Set Partitioning in Hierarchical Trees\fg{}, Amir Said and William A. Pearlman, IEEE Transactions on Circuits and Systems for Video Technology, Vol. 6, June 1996
+\\\texttt{[http://www.cipr.rpi.edu/~pearlman/papers/csvt96\_sp.pdf]}
+
+\paragraph{[2]} \og{}Client-Driven Selective Streaming of Multi-View Video for Interactive 3DTV\fg{}, Engin Kurutepe, Student Member, IEEE, M. Reha Civanlar, Fellow, IEEE, and A. Murat Tekalp, Fellow, IEEE, IEEE Transactions on Circuits and Systems for Video Technology, November 2007
+\\\texttt{[http://elvera.nue.tu-berlin.de/files/1114Kurutepe2007.pdf]}
+
+\paragraph{[3]} \og{}Video Streaming with Interactive Pan/Tilt/Zoom\fg{}, Aditya Mavlankar and Bernd Girod, High-Quality Visual Experience, October 2009
+\\\texttt{[http://web.stanford.edu/~bgirod/pdfs/Mavlankar\_Girod\_Chapter\_Oct09.pdf]}
+
+\paragraph{[4]} Documentation FFmpeg
+\\\texttt{[https://ffmpeg.org/ffmpeg-all.html]}
+
+\paragraph{[5]} \og{}OpenGL ES 2 for Android: A Quick-Start Guide\fg{},  Kevin Brothaler, June 2013
+\\\texttt{ISBN-13: 978-1937785345}
 
 \end{document}
