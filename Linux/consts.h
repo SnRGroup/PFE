@@ -13,4 +13,6 @@
 #define TCP_PORT 1234
 #define UDP_PORT 1235
 
+#define H264_BITRATE "400k"
+
 #endif

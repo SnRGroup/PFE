@@ -122,7 +122,7 @@ void *task_network(void *data) {
 		sscanf(buf,"%d,%d\n",&a, &b);
 		shared->zoiX=a;
 		shared->zoiY=b;
-		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount, shared->zoiX, shared->zoiY);
+		sprintf(buf, "POS;%d;%d;%d\n", shared->imgCount+1, shared->zoiX, shared->zoiY);
 		write(shared->socket, buf, strlen(buf));
 		printf("Next ZOI position : %d,%d\n",a,b);
 	}
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
 
 		sprintf(destination,"udp://%s:%d?pkt_size=188",shared->ip,UDP_PORT);
 
-		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-v", "0", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", "2000k", 
+		execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-v", "0", "-f", "rawvideo", "-s", "640x720", "-r", "10", "-pix_fmt", "yuv420p", "-i", "-", "-vcodec", "libx264", "-b:v", H264_BITRATE, 
 				"-bsf:v", "h264_mp4toannexb",
 				"-pix_fmt", "yuv420p", "-preset", "ultrafast", "-bufsize", "0", "-g", "10", "-tune", "zerolatency", "-fflags", "nobuffer", "-bufsize", "0", "-f", "mpegts",
 				//"roffi.mp4");	
