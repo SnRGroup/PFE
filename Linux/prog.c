@@ -25,6 +25,10 @@ int offsetY = WIDTH*HEIGHT;
 unsigned char buffer[WIDTH*HEIGHT*3/2];
 unsigned char buffer2[WIDTH*HEIGHT*3/2/2];
 
+/* 
+ * thread task video
+ * Get the RAW stream from FFmpeg and send it to FFmpeg encoder
+ */
 void *task_video(void *data) {
 
 	shared_t *shared = (shared_t*)data;
@@ -33,13 +37,14 @@ void *task_video(void *data) {
 	int n=0;
 	int n_read=0;
 
-	FILE *out = fopen("generated.ts","w");
+	//FILE *out = fopen("generated.ts","w");
 
 	while (1) {
 
 		int zoiX = shared->zoiX;
 		int zoiY = shared->zoiY;
 
+		// read the RAW stream
 		n_read = 0;
 		while (n_read < imgSize) {
 			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
@@ -47,7 +52,7 @@ void *task_video(void *data) {
 			}
 		}
 
-
+		// process the frame
 		bloc_t *bloc = malloc(sizeof(bloc_t));
 
 		bloc_t *blocs = malloc(WIDTH/2*HEIGHT/2*sizeof(bloc_t));
@@ -83,6 +88,8 @@ void *task_video(void *data) {
 
 
 		printf("FRAME=%d\n", ++shared->imgCount);
+
+		// send the frame to FFmpeg encoder
 		write(pipeToF[1], buffer2, imgSize/2);
 		//fwrite(buffer2, imgSize/2, 1, out);
 
@@ -95,10 +102,12 @@ void *task_video(void *data) {
 
 }
 
-void *task_network1(void *data) {
+/* 
+ * Thread network
+ * Receive new ZOI from the receiver
+ */
+void *task_network(void *data) {
 	shared_t *shared = (shared_t*)data;
-
-
 
 	while(1) {
 		char buf[101];
@@ -120,27 +129,18 @@ void *task_network1(void *data) {
 
 }
 
-void *task_network2(void *data) {
-	shared_t *shared = (shared_t*)data;
-
-	while(1) {
-		char* str = "Test\n";
-		//write(shared->socket,str,strlen(str));
-		sleep(1);
-	}
-}
-
-
 int main(int argc, char *argv[]) {
-
+	// create a type to share some parameters
 	shared_t *shared = malloc(sizeof(shared_t));
 	shared->imgCount=0;
 
+	// read command line arguments
 	if (argc >= 3) {
 		shared->zoiX = atoi(argv[1]);
 		shared->zoiY = atoi(argv[2]);
 	}
 
+	// create a TCP server
 	int servSocket;
 	struct sockaddr_in serv_addr, client_addr;
 	int client_addr_length;
@@ -172,13 +172,14 @@ int main(int argc, char *argv[]) {
 
 	write(shared->socket, "Hello\n", 7);	
 
+	// create a pipe to communicate between thread video and the new process (FFmpeg encoder)
 	pid_t pid;
 	pipe(pipeToF);
 	pipe(pipeFromF);
 	pid = fork();
 
+	// create a process to run FFmpeg which to encode RAW video and send it to the receiver
 	if (pid == 0) {
-
 
 		close(pipeToF[1]);
 		close(pipeFromF[0]);
@@ -204,22 +205,16 @@ int main(int argc, char *argv[]) {
 	close(pipeToF[0]);
 	close(pipeFromF[1]);
 
+        // create 2 threads
 	pthread_t thVideo;
-	pthread_t thNetwork1;
-	pthread_t thNetwork2;
-	pthread_t tca;
-	pthread_t td;
-
+	pthread_t thNetwork;
 
 	pthread_create(&thVideo, NULL, task_video, shared);
-	pthread_create(&thNetwork1, NULL, task_network1, shared);
-	pthread_create(&thNetwork2, NULL, task_network2, shared);
+	pthread_create(&thNetwork, NULL, task_network, shared);
 
 
 	pthread_join(thVideo, NULL);
-	pthread_join(thNetwork1, NULL);
-	pthread_join(thNetwork2, NULL);
-
+	pthread_join(thNetwork, NULL);
 }
 
 

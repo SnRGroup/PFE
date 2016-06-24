@@ -44,6 +44,9 @@ pthread_mutex_t mutex;
 pthread_mutex_t mutexCb;
 pthread_cond_t cond;
 
+/*
+ * add a new ZOI in the linked list of futur ZOIs
+ */
 void addFutureZoi(shared_t *shared, zoiInfo *zoi) {
 	pthread_mutex_lock(&mutex);
 	if (shared->zoiList == NULL) {
@@ -58,6 +61,10 @@ void addFutureZoi(shared_t *shared, zoiInfo *zoi) {
 	pthread_mutex_unlock(&mutex);
 }
 
+/*
+ * read the linked list of ZOIs to know if the new frame
+ * has a new ZOI
+ */
 void updateZoi(shared_t *shared, int frame) {
 	pthread_mutex_lock(&mutex);
 	while (shared->zoiList != NULL) {
@@ -77,10 +84,15 @@ void updateZoi(shared_t *shared, int frame) {
 	pthread_mutex_unlock(&mutex);
 }
 
+/* 
+ * thread task video
+ * Get the RAW stream from FFmpeg and send it to SDL 
+ */
 void *task_video(void *data) {
 
 	shared_t *shared = (shared_t*)data;
 
+	// create SDL window
 	SDL_Surface * ps_screen;
 	SDL_Overlay * ps_bmp;
 	SDL_Rect s_rect;
@@ -140,6 +152,7 @@ void *task_video(void *data) {
 	int i = 0;
 
 	while (1) {
+		// read RAW stream
 		int n_read = 0, n;
 		while (n_read < imgSize) {
 			while (( n = read(0, &buffer[n_read], imgSize - n_read)) > 0) {
@@ -148,7 +161,6 @@ void *task_video(void *data) {
 		}
 
 		i++;
-
 
 		if (! shared->processing) {
 			// clear buffer
@@ -214,28 +226,32 @@ void *task_video(void *data) {
 	
 		}
 
+		// send the stream to SDL
 		SDL_LockYUVOverlay (ps_bmp);
-
 		SDL_DisplayYUVOverlay (ps_bmp, & s_rect);
-
 		SDL_UnlockYUVOverlay (ps_bmp);
 
 		SDL_Delay (40);	
 	}
 }
 
+/* 
+ * thread network receiver
+ * Get the ACK of the emitter (for the new ZOI)
+ */
 void *task_network_receiver(void *data) {	
 	shared_t *shared = (shared_t*)data;
 
 	while(1) {
 		char buf[101];
+		// wait a new message
 		int len = read(shared->socket, buf, 100);
 		if (len == 0) {
-			//error("ERROR reading socket TCP");
 			printf("Control socket lost! Aborting mission...\n");
 			SDL_Quit();
 			exit(1);
 		}
+		// analyse the message
 		buf[len] = 0;
 		printf("TCPRECV=%s",buf);
 		if (strncmp(buf,"POS;",4) == 0) {
@@ -248,20 +264,24 @@ void *task_network_receiver(void *data) {
 			nZoi->frame=frame;
 			nZoi->x=newX;
 			nZoi->y=newY;
-			//printf("Adding...\n");
+			// add the new ZOI for the thread video
 			addFutureZoi(shared, nZoi);
-			//printf("Added\n");
 		}
 	}
 
 }
 
+/* 
+ * Thread network sender
+ * Get the new Zoi from the keyboard and send it to the emitter
+ */
 void *task_network_sender(void *data) {	
 	shared_t *shared = (shared_t*)data;
 
 	SDL_Event event; 
-	int continuer = 1;
 
+	// wait SDL configuration
+	int continuer = 1;
 	while(! shared->sdlReady){
 		sleep(1);
 	}
@@ -269,6 +289,7 @@ void *task_network_sender(void *data) {
 	int wantedZoiX = 0;
 	int wantedZoiY = 0;
 
+	// listen keyboard
 	while (continuer) 
 	{
 		SDL_WaitEvent(&event); 
@@ -281,7 +302,7 @@ void *task_network_sender(void *data) {
 				exit(0);
 				break;
 			case SDL_KEYDOWN:
-				/* Check the SDLKey values and move change the coords */
+				// Check the SDLKey values and move change the coords
 				switch( event.key.keysym.sym ){
 					case SDLK_LEFT:
 						if (wantedZoiX >= 20){
@@ -307,39 +328,33 @@ void *task_network_sender(void *data) {
 						shared->processing = ! shared->processing;
 						break;
 				}
+
+				// send the new ZOI to the emitter
 				char txt[100];
 				sprintf(txt, "%d,%d\n", wantedZoiX, wantedZoiY);
 				write(shared->socket, txt, strlen(txt));
+				// display the new ZOI in the title of the window
 				char title[100];
 				sprintf(title, "SnR Player - ZOI=(%d, %d)", wantedZoiX, wantedZoiY);    
 				SDL_WM_SetCaption(title, NULL);
 				break;
 		}
 	}
-	/*
-		 while(1) {
-		 char* str = "Test\n";  // TODO ecrire roi
-		 int len = write(shared->socket,str,strlen(str));
-		 if (len < 0) {
-		 error("ERROR writing socket TCP");
-		 }
-		 sleep(1);
-		 }
-		 */
 }
 
 
-
+/* 
+ * Thread ffmpeg control
+ * Get the PTS from ffmpeg output
+ */
 void *task_ffmpeg_control(void *data) {
 	shared_t *shared = (shared_t*)data;
 	FILE* fifo = fopen("ffmpegcontrolfifo", "r");
 	char buf[500];
 	while(1) {
 		fgets(buf, 500, fifo);
-		//printf("FFMPEG=%s\n",buf);
 		char *ptsPos = strstr(buf,"pts:");
 		if (ptsPos != 0) {
-			//printf("FRAME!\n");
 			char nbrs[11];
 			int j=0;
 			for (int i=0; i<10; i++) {
@@ -361,7 +376,7 @@ void *task_ffmpeg_control(void *data) {
 }
 
 /* 
- * error - wrapper for perror
+ * Print msg and close the program
  */
 void error(char *msg) {
 	perror(msg);
@@ -374,32 +389,34 @@ int main(int argc, char **argv) {
 	char *addrStr;
 	char buf[BUFSIZE];
 
+	// create a type to share some parameters
 	shared_t *shared = calloc(1, sizeof(shared_t));
 	shared->sdlReady = false;
 	shared->zoiList = NULL;
 
-	/* check command line arguments */
+	// check command line arguments
 	if (argc != 2) {
 		fprintf(stderr,"usage: %s <ip>\n", argv[0]);
 		exit(0);
 	}
 	addrStr = argv[1];
 
-	/* socket: create the socket */
+	// socket: create the socket
 	shared->socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
 		error("ERROR opening socket");
 
-	/* build the server's Internet address */
+	// build the server's Internet address
 	bzero((char *) &serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.s_addr = inet_addr(addrStr);
 	serveraddr.sin_port = htons(TCP_PORT);
 
-	/* connect: create a connection with the server */
+	// connect: create a connection with the server
 	if (connect(shared->socket, &serveraddr, sizeof(serveraddr)) < 0) 
 	        error("ERROR connecting");
 
+	// create 4 threads
 	pthread_t thNetworkReceiver;
 	pthread_t thNetworkSender;
 	pthread_t thVideo;
